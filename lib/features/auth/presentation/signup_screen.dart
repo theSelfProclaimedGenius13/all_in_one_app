@@ -1,19 +1,17 @@
-// lib/features/auth/presentation/login/login_screen.dart
+// lib/features/auth/presentation/signup/signup_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart'; // Import GoRouter
-import 'package:supabase_flutter/supabase_flutter.dart'; // Import Supabase for OAuthProvider
 
-// Import your BLoC files
+// Import BLoC files
 import 'package:all_in_one_app/features/auth/bloc/auth_bloc.dart';
 import 'package:all_in_one_app/features/auth/bloc/auth_state.dart';
 import 'package:all_in_one_app/features/auth/bloc/auth_event.dart';
+// DO NOT import AuthApi or AuthRepository
 
-// DO NOT import AuthApi or AuthRepository here
-
-class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
+class SignupScreen extends StatelessWidget {
+  const SignupScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -21,28 +19,33 @@ class LoginScreen extends StatelessWidget {
     final TextEditingController passwordController = TextEditingController();
 
     // 1. REMOVE THE BlocProvider WRAPPER
-    // The BLoC is now provided by main.dart
 
     return Scaffold(
-      appBar: AppBar(title: Text("Login")),
+      appBar: AppBar(title: Text("Sign Up")),
       body: BlocConsumer<AuthBloc, Auth_State>(
-        // Use BlocConsumer for navigation
         listener: (context, state) {
-          // GoRouter's redirect will handle success,
-          // but you can show snackbars here if you want.
           if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.error), backgroundColor: Colors.red),
             );
+          }
+          if (state is AuthInitial) {
+            // After successful signup, Supabase may send a confirmation email
+            // or you might be auto-logged in.
+            // For now, let's go back to login after signup.
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Signup successful! Please log in.'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            context.goNamed('login');
           }
         },
         builder: (context, state) {
           if (state is AuthLoading) {
             return Center(child: CircularProgressIndicator());
           }
-
-          // Don't show AuthError here, the listener handles it.
-          // The form should always be visible.
 
           return Padding(
             padding: const EdgeInsets.all(16.0),
@@ -62,31 +65,21 @@ class LoginScreen extends StatelessWidget {
                 ElevatedButton(
                   onPressed: () {
                     context.read<AuthBloc>().add(
-                      LoginRequested(
+                      SignupRequested(
                         emailController.text,
                         passwordController.text,
                       ),
                     );
                   },
-                  child: Text('Login'),
-                ),
-                SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () {
-                    context.read<AuthBloc>().add(
-                      SocialLoginRequested(OAuthProvider.google),
-                    );
-                  },
-                  child: Text('Sign in with Google'),
+                  child: Text('Sign Up'),
                 ),
 
-                // 2. ADD NAVIGATION HERE
+                // 2. ADD NAVIGATION BACK TO LOGIN
                 TextButton(
                   onPressed: () {
-                    // Navigate to the signup route
-                    context.goNamed('signup'); // or context.go('/signup')
+                    context.goNamed('login'); // or context.go('/login')
                   },
-                  child: Text("Don't have an account? Sign Up"),
+                  child: Text("Already have an account? Login"),
                 ),
               ],
             ),

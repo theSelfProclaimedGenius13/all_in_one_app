@@ -14,7 +14,10 @@ class AuthApi {
 
   // Social login - pass provider as string: 'google', 'facebook', etc.
   Future<void> signInWithProvider(OAuthProvider provider) async {
-    await client.auth.signInWithOAuth(provider);
+    await client.auth.signInWithOAuth(
+      provider,
+      redirectTo: 'io.supabase.hqegfonbltywlpxuwryj://auth',
+    );
   }
 
   Future<void> signOut() => client.auth.signOut();
