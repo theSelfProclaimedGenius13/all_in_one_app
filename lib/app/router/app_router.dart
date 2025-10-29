@@ -1,19 +1,24 @@
 // lib/config/router.dart
 
-import 'package:all_in_one_app/features/calculator/presentation/basic_calculator_screen.dart';
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:all_in_one_app/app/homepage.dart';
 
-// Import your pages and BLoC
-import 'package:all_in_one_app/features/auth/presentation/login_screen.dart';
-import 'package:all_in_one_app/features/auth/presentation/signup_screen.dart';
-import 'package:all_in_one_app/app/homepage.dart'; // We'll create this
-// We'll create this
 import 'package:all_in_one_app/features/auth/bloc/auth_bloc.dart';
 import 'package:all_in_one_app/features/auth/bloc/auth_state.dart';
 
+import 'package:all_in_one_app/features/auth/presentation/login_screen.dart';
+import 'package:all_in_one_app/features/auth/presentation/signup_screen.dart';
+import 'package:all_in_one_app/features/calculator/presentation/basic_calculator_screen.dart';
+import 'package:all_in_one_app/features/to_do/presentation/to_do_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../features/settings/presentation/settings_screen.dart';
+import '../../features/to_do/bloc/todo_bloc.dart';
+import '../../features/to_do/bloc/todo_event.dart';
+import '../../features/to_do/data/repositories/to_do_repo_impl.dart';
 import '../scaffold_with_menu.dart';
+import 'package:all_in_one_app/features/profile/presentation/profile_screen.dart';
 
 // Key for the ShellRoute's navigator
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -47,7 +52,7 @@ class AppRouter {
 
         // This is your main scaffold with the menu
         builder: (context, state, child) {
-          return ScaffoldWithMenu(child: child, state: state);
+          return ScaffoldWithMenu(state: state, child: child);
         },
 
         // --- Pages inside the Shell ---
@@ -58,9 +63,32 @@ class AppRouter {
             builder: (context, state) => HomePage(),
           ),
           GoRoute(
+            path: '/profile',
+            name: 'profile',
+            builder: (context, state) => ProfilePage(),
+          ),
+          GoRoute(
             path: '/basic_calculator',
             name: 'basic_calculator',
             builder: (context, state) => BasicCalculator(),
+          ),
+          GoRoute(
+            path: '/settings',
+            name: 'settings',
+            builder: (context, state) => SettingsScreen(),
+          ),
+          GoRoute(
+            path: '/todo',
+            name: 'todo',
+            builder: (context, state) {
+              // This provides the BLoC to the ToDoScreen
+              return BlocProvider(
+                create: (context) =>
+                    TodoBloc(todoRepository: TodoRepositoryImpl())
+                      ..add(LoadTodos()), // <-- This loads data immediately
+                child: const ToDoScreen(),
+              );
+            },
           ),
           // Add other pages with the menu bar here
           // e.g., GoRoute(path: '/settings', ...),

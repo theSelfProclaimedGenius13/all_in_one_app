@@ -1,14 +1,13 @@
 // lib/features/auth/presentation/login/login_screen.dart
 
+// Import your BLoC files
+import 'package:all_in_one_app/features/auth/bloc/auth_bloc.dart';
+import 'package:all_in_one_app/features/auth/bloc/auth_event.dart';
+import 'package:all_in_one_app/features/auth/bloc/auth_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart'; // Import GoRouter
 import 'package:supabase_flutter/supabase_flutter.dart'; // Import Supabase for OAuthProvider
-
-// Import your BLoC files
-import 'package:all_in_one_app/features/auth/bloc/auth_bloc.dart';
-import 'package:all_in_one_app/features/auth/bloc/auth_state.dart';
-import 'package:all_in_one_app/features/auth/bloc/auth_event.dart';
 
 // DO NOT import AuthApi or AuthRepository here
 

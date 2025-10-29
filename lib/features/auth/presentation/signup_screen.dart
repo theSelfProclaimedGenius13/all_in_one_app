@@ -1,13 +1,12 @@
 // lib/features/auth/presentation/signup/signup_screen.dart
 
+// Import BLoC files
+import 'package:all_in_one_app/features/auth/bloc/auth_bloc.dart';
+import 'package:all_in_one_app/features/auth/bloc/auth_event.dart';
+import 'package:all_in_one_app/features/auth/bloc/auth_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart'; // Import GoRouter
-
-// Import BLoC files
-import 'package:all_in_one_app/features/auth/bloc/auth_bloc.dart';
-import 'package:all_in_one_app/features/auth/bloc/auth_state.dart';
-import 'package:all_in_one_app/features/auth/bloc/auth_event.dart';
 // DO NOT import AuthApi or AuthRepository
 
 class SignupScreen extends StatelessWidget {

@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="main.dart" type="FlutterRunConfigurationType" factoryName="Flutter">
+    <option name="additionalArgs" value="--dart-define=SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxZWdmb25ibHR5d2xweHV3cnlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0ODA2NjQsImV4cCI6MjA3NzA1NjY2NH0.FEVAtg36KaPzVLKE_jbTjoYrNBLVKvCBmzmFJR3z_V0" />
+    <option name="filePath" value="$PROJECT_DIR$/lib/main.dart" />
+    <method v="2" />
+  </configuration>
+</component>

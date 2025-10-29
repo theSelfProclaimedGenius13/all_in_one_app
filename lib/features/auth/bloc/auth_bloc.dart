@@ -1,10 +1,12 @@
 import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../data/auth_repository.dart';
 import '../domain/user_entity.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
-import '../data/auth_repository.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthBloc extends Bloc<AuthEvent, Auth_State> {
   final AuthRepository repository;
