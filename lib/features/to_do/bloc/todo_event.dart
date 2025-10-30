@@ -29,3 +29,22 @@ class ToggleTodo extends TodoEvent {
   @override
   List<Object> get props => [id, isComplete];
 }
+
+class DeleteTodo extends TodoEvent {
+  final int id;
+
+  const DeleteTodo(this.id);
+
+  @override
+  List<Object> get props => [id];
+}
+
+class UpdateTodo extends TodoEvent {
+  final int id;
+  final String newTask;
+
+  const UpdateTodo({required this.id, required this.newTask});
+
+  @override
+  List<Object> get props => [id, newTask];
+}

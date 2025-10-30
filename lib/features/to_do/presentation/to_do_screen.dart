@@ -14,7 +14,36 @@ class ToDoScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('My To-Do List')),
       // 1. Wrap your main UI in a BlocBuilder
-      body: BlocBuilder<TodoBloc, TodoState>(
+      body: BlocConsumer<TodoBloc, TodoState>(
+        // --- 2. ADD THIS LISTENER ---
+        // This 'listener' does an action but does NOT rebuild the UI
+        listener: (context, state) {
+          if (state is TodosError) {
+            // First, hide any old SnackBars
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+            // Then, show the new one
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+
+        // --- 3. ADD THIS buildWhen ---
+        // This tells the 'builder' part to NOT rebuild
+        // when we get our TodosError signal. This prevents
+        // your UI from flickering to an error page.
+        buildWhen: (previous, current) {
+          // If the new state is an error, DON'T rebuild
+          if (current is TodosError) {
+            return false;
+          }
+          // Otherwise, rebuild as normal
+          return true;
+        },
         builder: (context, state) {
           // 2. Handle the LOADING state
           if (state is TodosLoading) {
@@ -34,18 +63,42 @@ class ToDoScreen extends StatelessWidget {
               itemCount: todos.length,
               itemBuilder: (context, index) {
                 final todo = todos[index];
-                return ListTile(
-                  title: Text(todo.task),
-                  leading: Checkbox(
-                    value: todo.isComplete,
-                    onChanged: (bool? newValue) {
-                      // Ensure the new value isn't null
-                      if (newValue != null) {
-                        // Find the BLoC and add the ToggleTodo event
-                        context.read<TodoBloc>().add(
-                          ToggleTodo(id: todo.id, isComplete: newValue),
-                        );
-                      }
+                return Dismissible(
+                  // The key is CRITICAL. It lets Flutter know which
+                  // item is which.
+                  key: Key(todo.id.toString()),
+                  direction: DismissDirection.endToStart,
+
+                  // This is called AFTER the swipe animation
+                  onDismissed: (direction) {
+                    // Find the BLoC and add the DeleteTodo event
+                    context.read<TodoBloc>().add(DeleteTodo(todo.id));
+                  },
+                  background: Container(color: Colors.transparent),
+                  // This is the red background that appears *behind* the tile
+                  secondaryBackground: Container(
+                    color: Colors.red,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    alignment: Alignment.centerRight,
+                    child: const Icon(Icons.delete, color: Colors.white),
+                  ),
+                  child: ListTile(
+                    title: Text(todo.task),
+                    leading: Checkbox(
+                      value: todo.isComplete,
+                      onChanged: (bool? newValue) {
+                        // Ensure the new value isn't null
+                        if (newValue != null) {
+                          // Find the BLoC and add the ToggleTodo event
+                          context.read<TodoBloc>().add(
+                            ToggleTodo(id: todo.id, isComplete: newValue),
+                          );
+                        }
+                      },
+                    ),
+                    onTap: () {
+                      // This will open your new edit dialog
+                      _showEditTodoDialog(context, todo);
                     },
                   ),
                 );
@@ -67,6 +120,7 @@ class ToDoScreen extends StatelessWidget {
           return const Center(child: Text('Something went wrong!'));
         },
       ),
+
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // TODO: Add AddTodo event
@@ -116,6 +170,54 @@ class ToDoScreen extends StatelessWidget {
                 }
               },
               child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showEditTodoDialog(BuildContext context, Todo todo) {
+    // 1. Create a controller and PRE-FILL it with the existing task text
+    final TextEditingController taskController = TextEditingController(
+      text: todo.task,
+    );
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Edit To-Do'),
+          content: TextField(
+            controller: taskController,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'What needs to be done?',
+            ),
+          ),
+          actions: [
+            // "Cancel" button
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext); // Close the dialog
+              },
+              child: const Text('Cancel'),
+            ),
+
+            // "Save" button
+            TextButton(
+              onPressed: () {
+                // 2. Get the new text
+                final newTask = taskController.text;
+
+                // 3. Send the UpdateTodo event
+                context.read<TodoBloc>().add(
+                  UpdateTodo(id: todo.id, newTask: newTask),
+                );
+
+                Navigator.pop(dialogContext); // Close the dialog
+              },
+              child: const Text('Save'),
             ),
           ],
         );

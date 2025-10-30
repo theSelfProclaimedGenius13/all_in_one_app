@@ -67,4 +67,41 @@ class TodoRepositoryImpl implements TodoRepository {
       throw Exception('Error toggling todo: $e');
     }
   }
+
+  @override
+  Future<void> deleteTodo(int id) async {
+    try {
+      // Get the user ID for security
+      final userId = supabaseClient.auth.currentUser!.id;
+
+      await supabaseClient
+          .from('todos') // Your table name
+          .delete()
+          .eq('id', id) // Where the ID matches
+          .eq('user_id', userId); // AND it belongs to the current user
+    } catch (e) {
+      throw Exception('Error deleting todo: $e');
+    }
+  }
+
+  @override
+  Future<Todo> updateTodo(int id, String task) async {
+    try {
+      // Get the user ID for security
+      final userId = supabaseClient.auth.currentUser!.id;
+
+      final data = await supabaseClient
+          .from('todos') // Your table name
+          .update({'task': task}) // Set the new task text
+          .eq('id', id) // Where the ID matches
+          .eq('user_id', userId) // AND it belongs to the current user
+          .select() // <-- Ask Supabase to return the row
+          .single(); // <-- Specifies we only expect ONE row back
+
+      // Convert the returned Map into a Todo object
+      return Todo.fromMap(data);
+    } catch (e) {
+      throw Exception('Error updating todo: $e');
+    }
+  }
 }

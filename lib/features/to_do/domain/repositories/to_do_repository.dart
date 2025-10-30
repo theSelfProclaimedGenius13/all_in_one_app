@@ -8,6 +8,10 @@ abstract class TodoRepository {
   Future<Todo> addTodo(String task);
 
   Future<void> toggleTodo(int id, bool isComplete);
+
+  Future<void> deleteTodo(int id);
+
+  Future<Todo> updateTodo(int id, String task);
   // We'll add more here later, like:
   // Future<void> addTodo(String task);
   // Future<void> toggleTodo(int id, bool isComplete);

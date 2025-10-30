@@ -8,11 +8,14 @@ import 'package:all_in_one_app/features/auth/bloc/auth_state.dart';
 import 'package:all_in_one_app/features/auth/presentation/login_screen.dart';
 import 'package:all_in_one_app/features/auth/presentation/signup_screen.dart';
 import 'package:all_in_one_app/features/calculator/presentation/basic_calculator_screen.dart';
+import 'package:all_in_one_app/features/pomodoro/presentation/pomodoro_timer_screen.dart';
 import 'package:all_in_one_app/features/to_do/presentation/to_do_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/notes/presentation/add_edit_notes_screen.dart';
+import '../../features/notes/presentation/notes_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/to_do/bloc/todo_bloc.dart';
 import '../../features/to_do/bloc/todo_event.dart';
@@ -78,6 +81,11 @@ class AppRouter {
             builder: (context, state) => SettingsScreen(),
           ),
           GoRoute(
+            path: '/pomodoro',
+            name: 'pomodoro',
+            builder: (context, state) => const PomodoroScreen(),
+          ),
+          GoRoute(
             path: '/todo',
             name: 'todo',
             builder: (context, state) {
@@ -90,6 +98,34 @@ class AppRouter {
               );
             },
           ),
+          GoRoute(
+            path: '/notes',
+            name: 'notes',
+            builder: (context, state) => const NotesScreen(),
+            routes: [
+              // This is the "Add Note" screen
+              // It's a sub-route of /notes
+              GoRoute(
+                path: 'add',
+                name: 'add_note',
+                builder: (context, state) =>
+                    const AddEditNoteScreen(noteId: null),
+              ),
+
+              // This is the "Edit Note" screen
+              // It takes an 'id' parameter from the path
+              GoRoute(
+                path: 'edit/:id', // e.g., /notes/edit/123
+                name: 'edit_note',
+                builder: (context, state) {
+                  // Pass the 'id' from the URL to the screen
+                  final id = state.pathParameters['id'];
+                  return AddEditNoteScreen(noteId: id);
+                },
+              ),
+            ],
+          ),
+
           // Add other pages with the menu bar here
           // e.g., GoRoute(path: '/settings', ...),
         ],

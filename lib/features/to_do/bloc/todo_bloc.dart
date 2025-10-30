@@ -22,6 +22,8 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
     on<LoadTodos>(_onLoadTodos);
     on<AddTodo>(_onAddTodo);
     on<ToggleTodo>(_onToggleTodo);
+    on<DeleteTodo>(_onDeleteTodo);
+    on<UpdateTodo>(_onUpdateTodo);
   }
 
   // The event handler function for 'LoadTodos'
@@ -93,8 +95,91 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
         // If it succeeds, great! Our state is already correct.
       } catch (e) {
         // 4. If it fails, roll back the state
-        print('Failed to toggle todo, rolling back: $e');
+        emit(TodosError('Failed to toggle todo, rolling back: $e'));
         // Re-emit the *original* state to undo the change in the UI
+        emit(currentState);
+      }
+    }
+  }
+
+  Future<void> _onDeleteTodo(DeleteTodo event, Emitter<TodoState> emit) async {
+    // Get the current state
+    final currentState = state;
+
+    if (currentState is TodosLoaded) {
+      // 1. EMIT THE NEW STATE IMMEDIATELY (Optimistic Update)
+      // Create a new list *without* the deleted item.
+      final updatedList = currentState.todos
+          .where((todo) => todo.id != event.id)
+          .toList();
+
+      emit(TodosLoaded(todos: updatedList));
+
+      // 2. Now, try to sync this change with Supabase
+      try {
+        await _todoRepository.deleteTodo(event.id);
+        // If it succeeds, great! Our state is already correct.
+      } catch (e) {
+        // 3. If it fails, roll back the state
+        emit(TodosError('Failed to delete todo, rolling back: $e'));
+        // Re-emit the *original* state to undo the change in the UI
+        emit(currentState);
+      }
+    }
+  }
+
+  Future<void> _onUpdateTodo(UpdateTodo event, Emitter<TodoState> emit) async {
+    final currentState = state;
+    if (currentState is! TodosLoaded) return; // Guard clause
+
+    // --- THIS IS YOUR SPECIAL LOGIC ---
+    // .trim() removes whitespace from the start and end
+    final bool isEmpty = event.newTask.trim().isEmpty;
+
+    if (isEmpty) {
+      // --- PATH A: THE TASK IS EMPTY, SO WE DELETE ---
+
+      // 1. Optimistic update (remove from list)
+      final updatedList = currentState.todos
+          .where((todo) => todo.id != event.id)
+          .toList();
+
+      emit(TodosLoaded(todos: updatedList));
+
+      // 2. Call repository
+      try {
+        await _todoRepository.deleteTodo(event.id);
+      } catch (e) {
+        emit(
+          TodosError(
+            'Failed to delete todo (on empty update), rolling back: $e',
+          ),
+        );
+        // 3. Rollback
+        emit(currentState);
+      }
+    } else {
+      // --- PATH B: THE TASK IS NOT EMPTY, SO WE UPDATE ---
+
+      // 1. Optimistic update (update item in list)
+      final updatedList = currentState.todos.map((todo) {
+        if (todo.id == event.id) {
+          // Use our copyWith method to return an updated todo
+          return todo.copyWith(task: event.newTask);
+        }
+        return todo;
+      }).toList();
+
+      emit(TodosLoaded(todos: updatedList));
+
+      // 2. Call repository
+      try {
+        // We call updateTodo, which returns the full object
+        // We don't need the returned object here, but it's good practice
+        await _todoRepository.updateTodo(event.id, event.newTask);
+      } catch (e) {
+        emit(TodosError('Failed to update todo, rolling back: $e'));
+        // 3. Rollback
         emit(currentState);
       }
     }

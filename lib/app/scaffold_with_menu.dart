@@ -24,6 +24,17 @@ class ScaffoldWithMenu extends StatelessWidget {
 
       // --- HERE IS THE NEW PROFILE ITEM YOU WANTED ---
       {'title': 'Profile', 'icon': Icons.person, 'routeName': 'profile'},
+      {'title': 'Notes', 'icon': Icons.note_alt_outlined, 'routeName': 'notes'},
+      {
+        'title': 'Calculator',
+        'icon': Icons.calculate_outlined,
+        'routeName': 'basic_calculator',
+      },
+      {
+        'title': 'Pomodoro',
+        'icon': Icons.timer_outlined,
+        'routeName': 'pomodoro',
+      },
 
       {'title': 'Settings', 'icon': Icons.settings, 'routeName': 'settings'},
       {
@@ -83,7 +94,8 @@ class ScaffoldWithMenu extends StatelessWidget {
                   final isSelected = currentRoute == item['routeName'];
 
                   return ListTile(
-                    tileColor: Colors.teal.withValues(alpha: 0.8), // Your color
+                    tileColor: Colors.teal.withValues(alpha: 0.8),
+                    // Your color
                     shape: RoundedSuperellipseBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -98,8 +110,8 @@ class ScaffoldWithMenu extends StatelessWidget {
 
                     // --- 4. THIS FIXES THE HIGHLIGHTING ---
                     selected: isSelected,
-                    selectedTileColor:
-                        Colors.teal, // Makes selected item darker
+                    selectedTileColor: Colors.teal,
+                    // Makes selected item darker
                     selectedColor: Colors.white,
 
                     onTap: () {
