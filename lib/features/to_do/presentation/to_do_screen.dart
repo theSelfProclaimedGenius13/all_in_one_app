@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
+import 'package:all_in_one_app/app/widgets/empty_state_widget.dart';
 import '../bloc/todo_bloc.dart';
 import '../bloc/todo_event.dart';
 import '../bloc/todo_state.dart';
@@ -61,11 +61,9 @@ class ToDoScreen extends StatelessWidget {
           // --- Empty State ---
           // Use the FILTERED list to check for empty
           if (state.filteredTodos.isEmpty) {
-            return const Center(
-              child: Text(
-                'No to-dos in this filter.',
-                style: TextStyle(fontSize: 18, color: Colors.grey),
-              ),
+            return const EmptyStateWidget(
+              icon: Icons.check_circle_outline,
+              message: 'No to-dos in this filter.',
             );
           }
 

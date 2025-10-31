@@ -1,30 +1,17 @@
 import 'package:all_in_one_app/features/notes/bloc/notes_bloc.dart';
-import 'package:all_in_one_app/features/notes/bloc/notes_event.dart';
+
 import 'package:all_in_one_app/features/notes/bloc/notes_state.dart';
-import 'package:all_in_one_app/features/notes/data/repositories/notes_repository_impl.dart';
+
 import 'package:all_in_one_app/features/notes/domain/note.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-class NotesScreen extends StatelessWidget {
-  const NotesScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => NotesBloc(
-        // We provide the repository implementation here
-        notesRepository: NotesRepositoryImpl(),
-      )..add(LoadNotes()), // <-- Immediately tell the BLoC to load the notes
-      child: const _NotesView(),
-    );
-  }
-}
+import '../../../app/widgets/empty_state_widget.dart';
 
 /// --- 2. The View Widget (Builds the UI) ---
-class _NotesView extends StatelessWidget {
-  const _NotesView();
+class NotesView extends StatelessWidget {
+  const NotesView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -64,11 +51,9 @@ class _NotesView extends StatelessWidget {
 
           // --- Empty State ---
           if (state.notes.isEmpty) {
-            return const Center(
-              child: Text(
-                'No notes yet. Tap + to add one!',
-                style: TextStyle(fontSize: 18, color: Colors.grey),
-              ),
+            return const EmptyStateWidget(
+              icon: Icons.note_add_outlined,
+              message: 'No notes yet.\nTap + to add one!',
             );
           }
 
@@ -90,6 +75,7 @@ class _NotesView extends StatelessWidget {
 /// --- 7. A Helper Widget for the Note Card ---
 class _NoteCard extends StatelessWidget {
   final Note note;
+
   const _NoteCard({required this.note});
 
   @override

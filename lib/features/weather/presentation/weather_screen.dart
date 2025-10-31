@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:all_in_one_app/features/weather/bloc/weather_bloc.dart';
-import 'package:all_in_one_app/features/weather/data/repositories/weather_repository_impl.dart';
 import 'package:all_in_one_app/features/weather/domain/weather.dart';
 
+import '../../../app/widgets/empty_state_widget.dart';
 import '../bloc/weather_event.dart';
 import '../bloc/weather_state.dart';
+import '../domain/repositories/weather_repository.dart';
 
 /// --- 1. The Main Widget (Provides the BLoC) ---
 class WeatherScreen extends StatelessWidget {
@@ -15,8 +16,8 @@ class WeatherScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => WeatherBloc(
-        // We create and provide the repository right here
-        weatherRepository: WeatherRepositoryImpl(),
+        // Ask the provider tree for the repository
+        weatherRepository: context.read<WeatherRepository>(),
       ),
       child: const _WeatherView(),
     );
@@ -87,9 +88,9 @@ class _WeatherViewState extends State<_WeatherView> {
                   builder: (context, state) {
                     // --- Initial State ---
                     if (state.status == WeatherStatus.initial) {
-                      return const Text(
-                        'Search for a city to get the weather',
-                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                      return const EmptyStateWidget(
+                        icon: Icons.cloud_outlined,
+                        message: 'Search for a city to get the weather',
                       );
                     }
 

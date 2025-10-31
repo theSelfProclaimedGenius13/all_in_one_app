@@ -1,5 +1,5 @@
 import 'dart:convert';
-
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 import '../../domain/repositories/weather_repository.dart';
@@ -7,13 +7,16 @@ import '../../domain/weather.dart';
 
 class WeatherRepositoryImpl implements WeatherRepository {
   // --- ⚠️ PASTE YOUR API KEY HERE ---
-  final String _apiKey = 'fb1591b55a5387ca05f032f12ae2c759';
+  final String _apiKey = dotenv.env['OPENWEATHER_API_KEY'] ?? 'MISSING_API_KEY';
 
   final String _baseUrl = 'https://api.openweathermap.org/data/2.5/weather';
 
   @override
   Future<Weather> getWeather(String cityName) async {
     // Build the full URL: e.g., .../weather?q=London&appid=YOUR_KEY
+    if (_apiKey == 'MISSING_API_KEY') {
+      throw Exception('OPENWEATHER_API_KEY not found in your .env file');
+    }
     final url = Uri.parse('$_baseUrl?q=$cityName&appid=$_apiKey');
 
     try {

@@ -9,12 +9,12 @@ import 'auth_event.dart';
 import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, Auth_State> {
-  final AuthRepository repository;
+  final AuthRepository authRepository;
 
   // --- ADD THIS VARIABLE ---
   StreamSubscription<AuthState>? _authStreamSubscription;
 
-  AuthBloc(this.repository) : super(AuthInitial()) {
+  AuthBloc({required this.authRepository}) : super(AuthInitial()) {
     // --- ADD THIS LISTENER IN THE CONSTRUCTOR ---
     _authStreamSubscription = Supabase.instance.client.auth.onAuthStateChange
         .listen((data) {
@@ -51,7 +51,7 @@ class AuthBloc extends Bloc<AuthEvent, Auth_State> {
     on<LoginRequested>((event, emit) async {
       emit(AuthLoading());
       try {
-        final user = await repository.loginWithEmail(
+        final user = await authRepository.loginWithEmail(
           event.email,
           event.password,
         );
@@ -68,7 +68,7 @@ class AuthBloc extends Bloc<AuthEvent, Auth_State> {
     on<SignupRequested>((event, emit) async {
       emit(AuthLoading());
       try {
-        await repository.signUpWithEmail(event.email, event.password);
+        await authRepository.signUpWithEmail(event.email, event.password);
         emit(AuthInitial());
       } catch (e) {
         emit(AuthError(e.toString()));
@@ -78,7 +78,7 @@ class AuthBloc extends Bloc<AuthEvent, Auth_State> {
     on<SocialLoginRequested>((event, emit) async {
       emit(AuthLoading());
       try {
-        await repository.loginWithProvider(event.provider);
+        await authRepository.loginWithProvider(event.provider);
         emit(AuthInitial());
       } catch (e) {
         emit(AuthError(e.toString()));
@@ -86,7 +86,7 @@ class AuthBloc extends Bloc<AuthEvent, Auth_State> {
     });
 
     on<LogoutRequested>((event, emit) async {
-      await repository.logout();
+      await authRepository.logout();
       emit(AuthInitial());
     });
   }

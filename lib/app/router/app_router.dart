@@ -15,12 +15,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:all_in_one_app/features/weather/presentation/weather_screen.dart';
 import '../../features/calculator/presentation/advance_calculator_screen.dart';
+import '../../features/notes/bloc/notes_bloc.dart';
+import '../../features/notes/bloc/notes_event.dart';
+import '../../features/notes/domain/repositories/notes_repositories.dart';
 import '../../features/notes/presentation/add_edit_notes_screen.dart';
 import '../../features/notes/presentation/notes_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/to_do/bloc/todo_bloc.dart';
 import '../../features/to_do/bloc/todo_event.dart';
-import '../../features/to_do/data/repositories/to_do_repo_impl.dart';
+import '../../features/to_do/domain/repositories/to_do_repository.dart';
 import '../scaffold_with_menu.dart';
 import 'package:all_in_one_app/features/profile/presentation/profile_screen.dart';
 
@@ -102,9 +105,10 @@ class AppRouter {
             builder: (context, state) {
               // This provides the BLoC to the ToDoScreen
               return BlocProvider(
-                create: (context) =>
-                    TodoBloc(todoRepository: TodoRepositoryImpl())
-                      ..add(LoadTodos()), // <-- This loads data immediately
+                create: (context) => TodoBloc(
+                  // Ask the provider tree for the repository
+                  todoRepository: context.read<TodoRepository>(),
+                )..add(LoadTodos()), // <-- This loads data immediately
                 child: const ToDoScreen(),
               );
             },
@@ -112,17 +116,16 @@ class AppRouter {
           GoRoute(
             path: '/notes',
             name: 'notes',
-            builder: (context, state) => const NotesScreen(),
+            builder: (context, state) {
+              return BlocProvider(
+                create: (context) => NotesBloc(
+                  // Ask the provider tree for the repository
+                  notesRepository: context.read<NotesRepository>(),
+                )..add(LoadNotes()),
+                child: const NotesView(), // Use the internal _NotesView
+              );
+            },
             routes: [
-              // This is the "Add Note" screen
-              // It's a sub-route of /notes
-              GoRoute(
-                path: 'add',
-                name: 'add_note',
-                builder: (context, state) =>
-                    const AddEditNoteScreen(noteId: null),
-              ),
-
               // This is the "Edit Note" screen
               // It takes an 'id' parameter from the path
               GoRoute(
