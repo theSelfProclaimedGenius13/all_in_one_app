@@ -29,7 +29,7 @@ class TodoRepositoryImpl implements TodoRepository {
   }
 
   @override
-  Future<Todo> addTodo(String task) async {
+  Future<Todo> addTodo({required String task, String? title}) async {
     try {
       // 1. Get the current user's ID (crucial for row-level security)
       final userId = supabaseClient.auth.currentUser!.id;
@@ -38,7 +38,8 @@ class TodoRepositoryImpl implements TodoRepository {
       final data = await supabaseClient
           .from('todos') // Your table name
           .insert({
-            'task': task,
+            'task': task, // <-- Now uses the named parameter
+            'title': title,
             'user_id': userId,
             'is_complete': false, // You can set defaults here or in Supabase
           })
@@ -85,14 +86,21 @@ class TodoRepositoryImpl implements TodoRepository {
   }
 
   @override
-  Future<Todo> updateTodo(int id, String task) async {
+  Future<Todo> updateTodo({
+    required int id,
+    required String task,
+    String? title,
+  }) async {
     try {
       // Get the user ID for security
       final userId = supabaseClient.auth.currentUser!.id;
 
       final data = await supabaseClient
           .from('todos') // Your table name
-          .update({'task': task}) // Set the new task text
+          .update({
+            'task': task,
+            'title': title, // <-- ADDED THIS
+          }) // Set the new task text
           .eq('id', id) // Where the ID matches
           .eq('user_id', userId) // AND it belongs to the current user
           .select() // <-- Ask Supabase to return the row

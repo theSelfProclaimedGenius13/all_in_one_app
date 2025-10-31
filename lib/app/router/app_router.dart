@@ -13,7 +13,8 @@ import 'package:all_in_one_app/features/to_do/presentation/to_do_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:all_in_one_app/features/weather/presentation/weather_screen.dart';
+import '../../features/calculator/presentation/advance_calculator_screen.dart';
 import '../../features/notes/presentation/add_edit_notes_screen.dart';
 import '../../features/notes/presentation/notes_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
@@ -74,6 +75,16 @@ class AppRouter {
             path: '/basic_calculator',
             name: 'basic_calculator',
             builder: (context, state) => BasicCalculator(),
+          ),
+          GoRoute(
+            path: '/scientific_calculator',
+            name: 'scientific_calculator',
+            builder: (context, state) => const ScientificCalculator(),
+          ),
+          GoRoute(
+            path: '/weather',
+            name: 'weather',
+            builder: (context, state) => const WeatherScreen(),
           ),
           GoRoute(
             path: '/settings',

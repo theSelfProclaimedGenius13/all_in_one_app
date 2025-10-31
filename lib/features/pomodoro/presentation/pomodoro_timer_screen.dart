@@ -5,23 +5,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/pomodoro_event.dart';
 
-/// --- 1. The Main Widget (Provides the BLoC) ---
-/// This widget creates and provides the PomodoroBloc to its child, `_PomodoroView`.
+/// --- 2. The View Widget (Builds the UI) ---
 class PomodoroScreen extends StatelessWidget {
   const PomodoroScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => PomodoroBloc(),
-      child: const _PomodoroView(),
-    );
-  }
-}
-
-/// --- 2. The View Widget (Builds the UI) ---
-class _PomodoroView extends StatelessWidget {
-  const _PomodoroView();
 
   // Helper function to format seconds into MM:SS
   String _formatDuration(int seconds) {
@@ -33,7 +19,6 @@ class _PomodoroView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Note: No AppBar, this screen is part of the ShellRoute
       body: BlocBuilder<PomodoroBloc, PomodoroState>(
         builder: (context, state) {
           // Determine the background color based on the state
@@ -66,8 +51,12 @@ class _PomodoroView extends StatelessWidget {
                   style: TextStyle(fontSize: 24, color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 20),
+
+                // --- Duration Controls ---
                 _buildDurationControls(context, state),
+
                 const SizedBox(height: 40),
+
                 // --- Action Buttons ---
                 _buildActionButtons(context, state),
               ],
@@ -78,8 +67,10 @@ class _PomodoroView extends StatelessWidget {
     );
   }
 
-  /// Helper to get a display string for the current status
+  /// --- 2. ALL HELPER METHODS ARE NOW PART OF PomodoroScreen ---
+
   String _getStatusText(PomodoroStatus status) {
+    // ... (This code is unchanged)
     switch (status) {
       case PomodoroStatus.timer_running:
         return 'Work';
@@ -92,13 +83,55 @@ class _PomodoroView extends StatelessWidget {
     }
   }
 
-  /// Helper widget to build the correct action buttons
-  Widget _buildActionButtons(BuildContext context, PomodoroState state) {
+  Widget _buildDurationControls(BuildContext context, PomodoroState state) {
+    // ... (This code is unchanged)
+    if (state.status != PomodoroStatus.timer_ready) {
+      return const SizedBox(height: 60);
+    }
     final bloc = context.read<PomodoroBloc>();
+    final currentMinutes = state.workDurationSetting ~/ 60;
+    return SizedBox(
+      height: 60,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.remove_circle_outline),
+            iconSize: 30,
+            color: Colors.grey.shade700,
+            onPressed: currentMinutes <= 5
+                ? null
+                : () {
+                    bloc.add(ChangeDuration(currentMinutes - 5));
+                  },
+          ),
+          Text(
+            '$currentMinutes min',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade800,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            iconSize: 30,
+            color: Colors.grey.shade700,
+            onPressed: currentMinutes >= 60
+                ? null
+                : () {
+                    bloc.add(ChangeDuration(currentMinutes + 5));
+                  },
+          ),
+        ],
+      ),
+    );
+  }
 
-    // We use a Row with MainAxisAlignment.center to hold the buttons
+  Widget _buildActionButtons(BuildContext context, PomodoroState state) {
+    // ... (This code is unchanged)
+    final bloc = context.read<PomodoroBloc>();
     Row buttons;
-
     switch (state.status) {
       case PomodoroStatus.timer_ready:
         buttons = Row(
@@ -112,7 +145,6 @@ class _PomodoroView extends StatelessWidget {
           ],
         );
         break;
-
       case PomodoroStatus.timer_running:
       case PomodoroStatus.timer_break:
         buttons = Row(
@@ -132,7 +164,6 @@ class _PomodoroView extends StatelessWidget {
           ],
         );
         break;
-
       case PomodoroStatus.timer_paused:
         buttons = Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -152,65 +183,13 @@ class _PomodoroView extends StatelessWidget {
         );
         break;
     }
-
-    // This ensures the buttons don't "jump" when changing
     return SizedBox(height: 60, child: buttons);
   }
 }
 
-Widget _buildDurationControls(BuildContext context, PomodoroState state) {
-  // Only show controls when the timer is 'Ready'
-  if (state.status != PomodoroStatus.timer_ready) {
-    // Return an empty box to maintain layout
-    return const SizedBox(height: 60);
-  }
-
-  final bloc = context.read<PomodoroBloc>();
-  // Get current setting in minutes
-  final currentMinutes = state.workDurationSetting ~/ 60;
-
-  return SizedBox(
-    height: 60, // Give it a fixed height
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.remove_circle_outline),
-          iconSize: 30,
-          color: Colors.grey.shade700,
-          // Don't allow going below 5 minutes
-          onPressed: currentMinutes <= 5
-              ? null
-              : () {
-                  bloc.add(ChangeDuration(currentMinutes - 5));
-                },
-        ),
-        Text(
-          '$currentMinutes min',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey.shade800,
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.add_circle_outline),
-          iconSize: 30,
-          color: Colors.grey.shade700,
-          // Don't allow going above 60 minutes
-          onPressed: currentMinutes >= 60
-              ? null
-              : () {
-                  bloc.add(ChangeDuration(currentMinutes + 5));
-                },
-        ),
-      ],
-    ),
-  );
-}
-
-/// --- 3. A Helper Widget for the Buttons ---
+/// --- 3. The helper button widget (unchanged) ---
 class _PomodoroButton extends StatelessWidget {
+  // ... (This code is unchanged)
   final IconData icon;
   final String label;
   final VoidCallback onPressed;

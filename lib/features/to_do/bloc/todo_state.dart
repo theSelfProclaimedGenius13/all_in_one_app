@@ -1,33 +1,59 @@
+import 'package:all_in_one_app/features/to_do/bloc/todo_event.dart';
 import 'package:equatable/equatable.dart';
 
 import '../domain/todo.dart';
 
-abstract class TodoState extends Equatable {
-  const TodoState();
+enum TodoStatus { initial, loading, success, failure }
+
+class TodoState extends Equatable {
+  // 1. The master list of all to-dos
+  final List<Todo> allTodos;
+
+  // 2. The current active filter
+  final TodoFilter filter;
+
+  // 3. The current status of the BLoC
+  final TodoStatus status;
+
+  // 4. Any error message
+  final String? errorMessage;
+
+  const TodoState({
+    this.allTodos = const <Todo>[],
+    this.filter = TodoFilter.all,
+    this.status = TodoStatus.initial,
+    this.errorMessage,
+  });
+
+  // 5. THE GETTER: This is the magic!
+  // The UI will call this to get the list it should display.
+  List<Todo> get filteredTodos {
+    switch (filter) {
+      case TodoFilter.active:
+        return allTodos.where((todo) => !todo.isComplete).toList();
+      case TodoFilter.completed:
+        return allTodos.where((todo) => todo.isComplete).toList();
+      case TodoFilter.all:
+      default:
+        return allTodos;
+    }
+  }
+
+  // 6. The copyWith method
+  TodoState copyWith({
+    List<Todo>? allTodos,
+    TodoFilter? filter,
+    TodoStatus? status,
+    String? errorMessage,
+  }) {
+    return TodoState(
+      allTodos: allTodos ?? this.allTodos,
+      filter: filter ?? this.filter,
+      status: status ?? this.status,
+      errorMessage: errorMessage, // Don't carry over old errors
+    );
+  }
 
   @override
-  List<Object> get props => [];
-}
-
-// 1. TodosLoading: The initial state, tells the UI to show a spinner
-class TodosLoading extends TodoState {}
-
-// 2. TodosLoaded: The success state, gives the UI the list of to-dos
-class TodosLoaded extends TodoState {
-  final List<Todo> todos; // We assume you have a 'Todo' model
-
-  const TodosLoaded({this.todos = const <Todo>[]});
-
-  @override
-  List<Object> get props => [todos];
-}
-
-// 3. TodosError: The failure state, gives the UI an error message
-class TodosError extends TodoState {
-  final String message;
-
-  const TodosError(this.message);
-
-  @override
-  List<Object> get props => [message];
+  List<Object?> get props => [allTodos, filter, status, errorMessage];
 }

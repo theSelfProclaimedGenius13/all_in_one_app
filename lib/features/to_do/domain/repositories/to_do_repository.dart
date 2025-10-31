@@ -5,13 +5,17 @@ abstract class TodoRepository {
   Future<List<Todo>> getTodos();
 
   // It takes the task string and returns the complete Todo object
-  Future<Todo> addTodo(String task);
+  Future<Todo> addTodo({required String task, String? title});
 
   Future<void> toggleTodo(int id, bool isComplete);
 
   Future<void> deleteTodo(int id);
 
-  Future<Todo> updateTodo(int id, String task);
+  Future<Todo> updateTodo({
+    required int id,
+    required String task,
+    String? title,
+  });
   // We'll add more here later, like:
   // Future<void> addTodo(String task);
   // Future<void> toggleTodo(int id, bool isComplete);

@@ -4,7 +4,16 @@ abstract class TodoEvent extends Equatable {
   const TodoEvent();
 
   @override
-  List<Object> get props => [];
+  List<Object?> get props => [];
+}
+
+class ChangeFilter extends TodoEvent {
+  final TodoFilter filter;
+
+  const ChangeFilter(this.filter);
+
+  @override
+  List<Object> get props => [filter];
 }
 
 // 1. LoadTodos: Triggered when we need to load the to-do list
@@ -13,11 +22,12 @@ class LoadTodos extends TodoEvent {}
 // --- ADD THIS CLASS ---
 class AddTodo extends TodoEvent {
   final String task;
+  final String? title;
 
-  const AddTodo(this.task);
+  const AddTodo({required this.task, this.title});
 
   @override
-  List<Object> get props => [task];
+  List<Object?> get props => [task, title];
 }
 
 class ToggleTodo extends TodoEvent {
@@ -41,10 +51,13 @@ class DeleteTodo extends TodoEvent {
 
 class UpdateTodo extends TodoEvent {
   final int id;
-  final String newTask;
+  final String task;
+  final String? title;
 
-  const UpdateTodo({required this.id, required this.newTask});
+  const UpdateTodo({required this.id, required this.task, this.title});
 
   @override
-  List<Object> get props => [id, newTask];
+  List<Object?> get props => [id, task, title];
 }
+
+enum TodoFilter { all, active, completed }

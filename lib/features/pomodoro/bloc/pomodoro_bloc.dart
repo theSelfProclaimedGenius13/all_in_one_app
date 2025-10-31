@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:all_in_one_app/features/pomodoro/bloc/pomodoro_event.dart';
 import 'package:all_in_one_app/features/pomodoro/bloc/pomodoro_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:all_in_one_app/features/pomodoro/notification_services.dart';
 
 class PomodoroBloc extends Bloc<PomodoroEvent, PomodoroState> {
   // --- Timer Settings ---
@@ -13,9 +14,11 @@ class PomodoroBloc extends Bloc<PomodoroEvent, PomodoroState> {
   // --- Internal Timer ---
   // This will hold our active 1-second timer
   Timer? _timer;
+  final NotificationService _notificationService;
 
-  PomodoroBloc()
-    : super(
+  PomodoroBloc({required NotificationService notificationService})
+    : _notificationService = notificationService,
+      super(
         const PomodoroState(
           duration: _defaultWorkDuration,
           workDurationSetting: _defaultWorkDuration,
@@ -123,6 +126,10 @@ class PomodoroBloc extends Bloc<PomodoroEvent, PomodoroState> {
             status: PomodoroStatus.timer_break,
           ),
         );
+        _notificationService.showNotification(
+          "Time for a break!",
+          "Great work! Your 5-minute break has started.",
+        );
         // Automatically start the break timer
         _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
           add(TickTimer(state.duration - 1));
@@ -134,6 +141,10 @@ class PomodoroBloc extends Bloc<PomodoroEvent, PomodoroState> {
             duration: state.workDurationSetting,
             status: PomodoroStatus.timer_ready,
           ),
+        );
+        _notificationService.showNotification(
+          "Break's over!",
+          "Your next work session is ready to start.",
         );
       }
     }

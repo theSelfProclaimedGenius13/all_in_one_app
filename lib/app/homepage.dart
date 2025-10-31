@@ -10,7 +10,7 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // You can get the user's info like this:
+    //  get the user's info like this:
     final user = (context.watch<AuthBloc>().state as AuthAuthenticated).user;
 
     return Scaffold(body: Center(child: Text('Welcome ${user.email}!')));

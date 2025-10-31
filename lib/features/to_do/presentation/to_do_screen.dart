@@ -12,216 +12,224 @@ class ToDoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My To-Do List')),
-      // 1. Wrap your main UI in a BlocBuilder
-      body: BlocConsumer<TodoBloc, TodoState>(
-        // --- 2. ADD THIS LISTENER ---
-        // This 'listener' does an action but does NOT rebuild the UI
-        listener: (context, state) {
-          if (state is TodosError) {
-            // First, hide any old SnackBars
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      appBar: AppBar(
+        title: const Text('My To-Do List'),
+        // We'll add the filter buttons at the bottom of the AppBar
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(kToolbarHeight),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ),
+            // --- 1. THIS IS THE NEW FILTER WIDGET ---
+            child: _BuildFilterButtons(),
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // --- 2. UPDATED a new dialog function ---
+          _showAddEditTodoDialog(context);
+        },
+        child: const Icon(Icons.add),
+      ),
 
-            // Then, show the new one
+      // --- 3. UPDATED BlocConsumer ---
+      body: BlocConsumer<TodoBloc, TodoState>(
+        // --- 4. UPDATED LISTENER ---
+        listener: (context, state) {
+          // Listen for the 'failure' status
+          if (state.status == TodoStatus.failure &&
+              state.errorMessage != null) {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.message),
+                content: Text(state.errorMessage!),
                 backgroundColor: Colors.red,
               ),
             );
           }
         },
-
-        // --- 3. ADD THIS buildWhen ---
-        // This tells the 'builder' part to NOT rebuild
-        // when we get our TodosError signal. This prevents
-        // your UI from flickering to an error page.
-        buildWhen: (previous, current) {
-          // If the new state is an error, DON'T rebuild
-          if (current is TodosError) {
-            return false;
-          }
-          // Otherwise, rebuild as normal
-          return true;
-        },
+        // --- 5. UPDATED BUILDER ---
         builder: (context, state) {
-          // 2. Handle the LOADING state
-          if (state is TodosLoading) {
+          // --- Loading State ---
+          if (state.status == TodoStatus.loading && state.allTodos.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // 3. Handle the LOADED state
-          if (state is TodosLoaded) {
-            final List<Todo> todos = state.todos; // Get the list from the state
-
-            if (todos.isEmpty) {
-              return const Center(child: Text('No to-dos yet. Add one!'));
-            }
-
-            // Display the list
-            return ListView.builder(
-              itemCount: todos.length,
-              itemBuilder: (context, index) {
-                final todo = todos[index];
-                return Dismissible(
-                  // The key is CRITICAL. It lets Flutter know which
-                  // item is which.
-                  key: Key(todo.id.toString()),
-                  direction: DismissDirection.endToStart,
-
-                  // This is called AFTER the swipe animation
-                  onDismissed: (direction) {
-                    // Find the BLoC and add the DeleteTodo event
-                    context.read<TodoBloc>().add(DeleteTodo(todo.id));
-                  },
-                  background: Container(color: Colors.transparent),
-                  // This is the red background that appears *behind* the tile
-                  secondaryBackground: Container(
-                    color: Colors.red,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    alignment: Alignment.centerRight,
-                    child: const Icon(Icons.delete, color: Colors.white),
-                  ),
-                  child: ListTile(
-                    title: Text(todo.task),
-                    leading: Checkbox(
-                      value: todo.isComplete,
-                      onChanged: (bool? newValue) {
-                        // Ensure the new value isn't null
-                        if (newValue != null) {
-                          // Find the BLoC and add the ToggleTodo event
-                          context.read<TodoBloc>().add(
-                            ToggleTodo(id: todo.id, isComplete: newValue),
-                          );
-                        }
-                      },
-                    ),
-                    onTap: () {
-                      // This will open your new edit dialog
-                      _showEditTodoDialog(context, todo);
-                    },
-                  ),
-                );
-              },
-            );
-          }
-
-          // 4. Handle the ERROR state
-          if (state is TodosError) {
-            return Center(
+          // --- Empty State ---
+          // Use the FILTERED list to check for empty
+          if (state.filteredTodos.isEmpty) {
+            return const Center(
               child: Text(
-                'Failed to load todos: ${state.message}',
-                style: const TextStyle(color: Colors.red),
+                'No to-dos in this filter.',
+                style: TextStyle(fontSize: 18, color: Colors.grey),
               ),
             );
           }
 
-          // 5. Fallback for any other state
-          return const Center(child: Text('Something went wrong!'));
+          // --- Success State (Show the list) ---
+          // Use the FILTERED list to build the ListView
+          final todos = state.filteredTodos;
+          return ListView.builder(
+            itemCount: todos.length,
+            itemBuilder: (context, index) {
+              final todo = todos[index];
+              return Dismissible(
+                key: Key(todo.id.toString()),
+                direction: DismissDirection.endToStart,
+                background: Container(color: Colors.transparent),
+                secondaryBackground: Container(
+                  color: Colors.red,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  alignment: Alignment.centerRight,
+                  child: const Icon(Icons.delete, color: Colors.white),
+                ),
+                onDismissed: (direction) {
+                  context.read<TodoBloc>().add(DeleteTodo(todo.id));
+                },
+                child: ListTile(
+                  title: Text(
+                    todo.title ?? todo.task,
+                  ), // Show title if it exists
+                  subtitle: todo.title != null ? Text(todo.task) : null,
+                  leading: Checkbox(
+                    value: todo.isComplete,
+                    onChanged: (bool? newValue) {
+                      if (newValue != null) {
+                        context.read<TodoBloc>().add(
+                          ToggleTodo(id: todo.id, isComplete: newValue),
+                        );
+                      }
+                    },
+                  ),
+                  onTap: () {
+                    // --- 6. UPDATED the dialog call ---
+                    _showAddEditTodoDialog(context, todoToEdit: todo);
+                  },
+                ),
+              );
+            },
+          );
         },
-      ),
-
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Add AddTodo event
-          _showAddTodoDialog(context);
-        },
-        child: const Icon(Icons.add),
       ),
     );
   }
 
-  void _showAddTodoDialog(BuildContext context) {
-    // We create a controller here, specific to this dialog
-    final TextEditingController taskController = TextEditingController();
+  // --- 7. A NEW, COMBINED DIALOG FUNCTION ---
+  // This handles BOTH adding and editing
+  void _showAddEditTodoDialog(BuildContext context, {Todo? todoToEdit}) {
+    final bool isEditing = todoToEdit != null;
+    final titleController = TextEditingController(text: todoToEdit?.title);
+    final taskController = TextEditingController(text: todoToEdit?.task);
 
     showDialog(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Add New To-Do'),
-          content: TextField(
-            controller: taskController,
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'What needs to be done?',
-            ),
+          title: Text(isEditing ? 'Edit To-Do' : 'Add To-Do'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  hintText: 'Title (Optional)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: taskController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: 'Task description',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
           ),
           actions: [
-            // "Cancel" button
             TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext); // Close the dialog
-              },
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
-
-            // "Add" button
             TextButton(
               onPressed: () {
-                final task = taskController.text;
-                if (task.isNotEmpty) {
-                  // This is the key line:
-                  // 1. Find the TodoBloc
-                  // 2. Add the AddTodo event with the task text
-                  context.read<TodoBloc>().add(AddTodo(task));
+                final String task = taskController.text;
+                final String? title = titleController.text.isEmpty
+                    ? null
+                    : titleController.text;
 
-                  Navigator.pop(dialogContext); // Close the dialog
+                if (task.isEmpty && !isEditing) {
+                  // Don't add an empty task
+                  Navigator.pop(dialogContext);
+                  return;
                 }
+
+                if (isEditing) {
+                  // --- 8. UPDATED 'UpdateTodo' event ---
+                  context.read<TodoBloc>().add(
+                    UpdateTodo(
+                      id: todoToEdit.id,
+                      task: task, // Use 'task'
+                      title: title,
+                    ),
+                  );
+                } else {
+                  // --- 9. UPDATED 'AddTodo' event ---
+                  context.read<TodoBloc>().add(
+                    AddTodo(
+                      task: task, // Use 'task'
+                      title: title,
+                    ),
+                  );
+                }
+                Navigator.pop(dialogContext);
               },
-              child: const Text('Add'),
+              child: Text(isEditing ? 'Save' : 'Add'),
             ),
           ],
         );
       },
     );
   }
+}
 
-  void _showEditTodoDialog(BuildContext context, Todo todo) {
-    // 1. Create a controller and PRE-FILL it with the existing task text
-    final TextEditingController taskController = TextEditingController(
-      text: todo.task,
-    );
+// --- 10. THE NEW FILTER WIDGET ---
+class _BuildFilterButtons extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    // Use a BlocSelector to only rebuild when the *filter* changes
+    final currentFilter = context.select((TodoBloc bloc) => bloc.state.filter);
 
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Edit To-Do'),
-          content: TextField(
-            controller: taskController,
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'What needs to be done?',
-            ),
-          ),
-          actions: [
-            // "Cancel" button
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext); // Close the dialog
-              },
-              child: const Text('Cancel'),
-            ),
-
-            // "Save" button
-            TextButton(
-              onPressed: () {
-                // 2. Get the new text
-                final newTask = taskController.text;
-
-                // 3. Send the UpdateTodo event
-                context.read<TodoBloc>().add(
-                  UpdateTodo(id: todo.id, newTask: newTask),
-                );
-
-                Navigator.pop(dialogContext); // Close the dialog
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
+    return SegmentedButton<TodoFilter>(
+      // The currently selected filter
+      selected: {currentFilter},
+      // This is called when a new segment is tapped
+      onSelectionChanged: (Set<TodoFilter> newFilter) {
+        // Send the event to the BLoC
+        context.read<TodoBloc>().add(ChangeFilter(newFilter.first));
       },
+      segments: const [
+        // The three filter options
+        ButtonSegment(
+          value: TodoFilter.all,
+          label: Text('All'),
+          icon: Icon(Icons.list),
+        ),
+        ButtonSegment(
+          value: TodoFilter.active,
+          label: Text('Active'),
+          icon: Icon(Icons.check_box_outline_blank),
+        ),
+        ButtonSegment(
+          value: TodoFilter.completed,
+          label: Text('Done'),
+          icon: Icon(Icons.check_box),
+        ),
+      ],
     );
   }
 }

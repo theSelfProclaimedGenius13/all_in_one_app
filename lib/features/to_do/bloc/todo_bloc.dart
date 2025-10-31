@@ -18,169 +18,161 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
   TodoBloc({required TodoRepository todoRepository})
     : _todoRepository = todoRepository,
       // 5. Assign it
-      super(TodosLoading()) {
+      super(const TodoState()) {
     on<LoadTodos>(_onLoadTodos);
     on<AddTodo>(_onAddTodo);
     on<ToggleTodo>(_onToggleTodo);
     on<DeleteTodo>(_onDeleteTodo);
     on<UpdateTodo>(_onUpdateTodo);
+    on<ChangeFilter>(_onChangeFilter);
+  }
+
+  void _onChangeFilter(ChangeFilter event, Emitter<TodoState> emit) {
+    // Just emit a new state with the new filter
+    emit(state.copyWith(filter: event.filter));
   }
 
   // The event handler function for 'LoadTodos'
   Future<void> _onLoadTodos(LoadTodos event, Emitter<TodoState> emit) async {
     // 1. Emit the loading state to show a spinner in the UI
-    emit(TodosLoading());
+    emit(state.copyWith(status: TodoStatus.loading));
 
     try {
       // 7. This is the new part!
       //    We call the REPOSITORY, not Supabase directly
-      final List<Todo> todos = await _todoRepository.getTodos();
+      final todos = await _todoRepository.getTodos();
 
       // 8. Emit the success state with the real data
-      emit(TodosLoaded(todos: todos));
+      emit(state.copyWith(status: TodoStatus.success, allTodos: todos));
     } catch (e) {
       // 4. If anything goes wrong, emit the error state
-      emit(TodosError(e.toString()));
+      emit(
+        state.copyWith(status: TodoStatus.failure, errorMessage: e.toString()),
+      );
     }
   }
 
-  // --- 2. ADD THE NEW HANDLER FUNCTION ---
+  // --- REFACTORED ---
   Future<void> _onAddTodo(AddTodo event, Emitter<TodoState> emit) async {
-    // Get the current state
-    final currentState = state;
-
-    // We can only add a todo if we are already in the 'Loaded' state
-    if (currentState is TodosLoaded) {
-      try {
-        // Call the repository to add the item to Supabase
-        // This will return the new Todo object
-        final newTodo = await _todoRepository.addTodo(event.task);
-
-        // Create a new list based on the old list, plus the new todo
-        final updatedList = List<Todo>.from(currentState.todos)..add(newTodo);
-
-        // Emit the new 'Loaded' state with the updated list
-        emit(TodosLoaded(todos: updatedList));
-      } catch (e) {
-        // If it fails, you could emit a temporary error state
-
-        emit(TodosError('Failed to add todo: $e'));
-      }
+    // We can add a todo even if the list is loading
+    try {
+      final newTodo = await _todoRepository.addTodo(
+        task: event.task,
+        title: event.title,
+      );
+      // Create a new list with the new todo at the top
+      final updatedList = [newTodo, ...state.allTodos];
+      // Emit 'success' status with the new list
+      emit(state.copyWith(status: TodoStatus.success, allTodos: updatedList));
+    } catch (e) {
+      // Emit 'failure' and show an error
+      emit(
+        state.copyWith(status: TodoStatus.failure, errorMessage: e.toString()),
+      );
     }
   }
 
   Future<void> _onToggleTodo(ToggleTodo event, Emitter<TodoState> emit) async {
-    // Get the current state
-    final currentState = state;
+    // Save the previous state for rollback
+    final previousState = state;
 
-    if (currentState is TodosLoaded) {
-      // 1. Create an updated list
-      final List<Todo> updatedTodos = currentState.todos.map((todo) {
-        // Find the todo that was toggled
-        if (todo.id == event.id) {
-          // Use our new copyWith method!
-          return todo.copyWith(isComplete: event.isComplete);
-        }
-        // Return all other todos unchanged
-        return todo;
-      }).toList();
-
-      // 2. EMIT THE NEW STATE IMMEDIATELY (Optimistic Update)
-      // The UI will rebuild right away, feeling very fast.
-      emit(TodosLoaded(todos: updatedTodos));
-
-      // 3. Now, try to sync this change with Supabase
-      try {
-        await _todoRepository.toggleTodo(event.id, event.isComplete);
-        // If it succeeds, great! Our state is already correct.
-      } catch (e) {
-        // 4. If it fails, roll back the state
-        emit(TodosError('Failed to toggle todo, rolling back: $e'));
-        // Re-emit the *original* state to undo the change in the UI
-        emit(currentState);
+    // Optimistic update
+    final updatedList = state.allTodos.map((todo) {
+      if (todo.id == event.id) {
+        return todo.copyWith(isComplete: event.isComplete);
       }
+      return todo;
+    }).toList();
+
+    // Emit the new list immediately
+    emit(state.copyWith(allTodos: updatedList));
+
+    try {
+      await _todoRepository.toggleTodo(event.id, event.isComplete);
+    } catch (e) {
+      // If it fails, emit the *previous* state with a new error message
+      emit(
+        previousState.copyWith(
+          status: TodoStatus.failure,
+          errorMessage: 'Failed to update. Check connection.',
+        ),
+      );
     }
   }
 
+  // --- REFACTORED ---
   Future<void> _onDeleteTodo(DeleteTodo event, Emitter<TodoState> emit) async {
-    // Get the current state
-    final currentState = state;
+    // Save the previous state for rollback
+    final previousState = state;
 
-    if (currentState is TodosLoaded) {
-      // 1. EMIT THE NEW STATE IMMEDIATELY (Optimistic Update)
-      // Create a new list *without* the deleted item.
-      final updatedList = currentState.todos
-          .where((todo) => todo.id != event.id)
-          .toList();
+    // Optimistic update
+    final updatedList = state.allTodos
+        .where((todo) => todo.id != event.id)
+        .toList();
 
-      emit(TodosLoaded(todos: updatedList));
+    // Emit the new list immediately
+    emit(state.copyWith(allTodos: updatedList));
 
-      // 2. Now, try to sync this change with Supabase
-      try {
-        await _todoRepository.deleteTodo(event.id);
-        // If it succeeds, great! Our state is already correct.
-      } catch (e) {
-        // 3. If it fails, roll back the state
-        emit(TodosError('Failed to delete todo, rolling back: $e'));
-        // Re-emit the *original* state to undo the change in the UI
-        emit(currentState);
-      }
+    try {
+      await _todoRepository.deleteTodo(event.id);
+    } catch (e) {
+      // If it fails, roll back
+      emit(
+        previousState.copyWith(
+          status: TodoStatus.failure,
+          errorMessage: 'Failed to delete. Check connection.',
+        ),
+      );
     }
   }
 
+  // --- REFACTORED ---
   Future<void> _onUpdateTodo(UpdateTodo event, Emitter<TodoState> emit) async {
-    final currentState = state;
-    if (currentState is! TodosLoaded) return; // Guard clause
+    // Save the previous state for rollback
+    final previousState = state;
 
-    // --- THIS IS YOUR SPECIAL LOGIC ---
-    // .trim() removes whitespace from the start and end
-    final bool isEmpty = event.newTask.trim().isEmpty;
+    final bool isEmpty = event.task.trim().isEmpty;
 
     if (isEmpty) {
-      // --- PATH A: THE TASK IS EMPTY, SO WE DELETE ---
-
-      // 1. Optimistic update (remove from list)
-      final updatedList = currentState.todos
+      // --- DELETE PATH ---
+      final updatedList = state.allTodos
           .where((todo) => todo.id != event.id)
           .toList();
-
-      emit(TodosLoaded(todos: updatedList));
-
-      // 2. Call repository
+      emit(state.copyWith(allTodos: updatedList)); // Optimistic update
       try {
         await _todoRepository.deleteTodo(event.id);
       } catch (e) {
+        // Rollback
         emit(
-          TodosError(
-            'Failed to delete todo (on empty update), rolling back: $e',
+          previousState.copyWith(
+            status: TodoStatus.failure,
+            errorMessage: 'Failed to delete. Check connection.',
           ),
         );
-        // 3. Rollback
-        emit(currentState);
       }
     } else {
-      // --- PATH B: THE TASK IS NOT EMPTY, SO WE UPDATE ---
-
-      // 1. Optimistic update (update item in list)
-      final updatedList = currentState.todos.map((todo) {
+      // --- UPDATE PATH ---
+      final updatedList = state.allTodos.map((todo) {
         if (todo.id == event.id) {
-          // Use our copyWith method to return an updated todo
-          return todo.copyWith(task: event.newTask);
+          return todo.copyWith(task: event.task, title: event.title);
         }
         return todo;
       }).toList();
-
-      emit(TodosLoaded(todos: updatedList));
-
-      // 2. Call repository
+      emit(state.copyWith(allTodos: updatedList)); // Optimistic update
       try {
-        // We call updateTodo, which returns the full object
-        // We don't need the returned object here, but it's good practice
-        await _todoRepository.updateTodo(event.id, event.newTask);
+        await _todoRepository.updateTodo(
+          id: event.id,
+          task: event.task,
+          title: event.title,
+        );
       } catch (e) {
-        emit(TodosError('Failed to update todo, rolling back: $e'));
-        // 3. Rollback
-        emit(currentState);
+        // Rollback
+        emit(
+          previousState.copyWith(
+            status: TodoStatus.failure,
+            errorMessage: 'Failed to update. Check connection.',
+          ),
+        );
       }
     }
   }
