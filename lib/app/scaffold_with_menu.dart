@@ -33,13 +33,14 @@ class ScaffoldWithMenu extends StatelessWidget {
         'icon': Icons.timer_outlined,
         'routeName': 'pomodoro',
       },
-      {'title': 'Settings', 'icon': Icons.settings, 'routeName': 'settings'},
+
       {
         'title': 'ToDo',
         'icon': Icons.sticky_note_2_rounded,
         'routeName': 'todo',
       },
       {'title': 'Weather', 'icon': Icons.wb_sunny, 'routeName': 'weather'},
+      {'title': 'Settings', 'icon': Icons.settings, 'routeName': 'settings'},
     ];
 
     return Scaffold(

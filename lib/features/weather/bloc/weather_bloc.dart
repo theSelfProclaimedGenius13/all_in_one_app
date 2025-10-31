@@ -11,6 +11,21 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
     : _weatherRepository = weatherRepository,
       super(const WeatherState()) {
     on<FetchWeather>(_onFetchWeather);
+    on<LoadLastCity>(_onLoadLastCity);
+  }
+
+  Future<void> _onLoadLastCity(
+    LoadLastCity event,
+    Emitter<WeatherState> emit,
+  ) async {
+    // Get the saved city from the repository
+    final lastCity = await _weatherRepository.getLastSearchedCity();
+
+    if (lastCity != null) {
+      // If we have a saved city, automatically fetch its weather
+      add(FetchWeather(lastCity));
+    }
+    // If we don't have one, do nothing. The state stays 'initial'.
   }
 
   Future<void> _onFetchWeather(
@@ -23,7 +38,7 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
     try {
       // 2. Call the repository
       final weather = await _weatherRepository.getWeather(event.cityName);
-
+      await _weatherRepository.saveLastSearchedCity(event.cityName);
       // 3. Emit the Success state with the data
       emit(state.copyWith(status: WeatherStatus.success, weather: weather));
     } catch (e) {

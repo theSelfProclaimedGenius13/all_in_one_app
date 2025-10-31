@@ -15,9 +15,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:all_in_one_app/features/weather/presentation/weather_screen.dart';
 import '../../features/calculator/presentation/advance_calculator_screen.dart';
-import '../../features/notes/bloc/notes_bloc.dart';
-import '../../features/notes/bloc/notes_event.dart';
-import '../../features/notes/domain/repositories/notes_repositories.dart';
+
 import '../../features/notes/presentation/add_edit_notes_screen.dart';
 import '../../features/notes/presentation/notes_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
@@ -116,23 +114,20 @@ class AppRouter {
           GoRoute(
             path: '/notes',
             name: 'notes',
-            builder: (context, state) {
-              return BlocProvider(
-                create: (context) => NotesBloc(
-                  // Ask the provider tree for the repository
-                  notesRepository: context.read<NotesRepository>(),
-                )..add(LoadNotes()),
-                child: const NotesView(), // Use the internal _NotesView
-              );
-            },
+            // The builder just returns the screen now.
+            // The BLoC is already provided by main.dart.
+            builder: (context, state) => const NotesView(),
             routes: [
-              // This is the "Edit Note" screen
-              // It takes an 'id' parameter from the path
               GoRoute(
-                path: 'edit/:id', // e.g., /notes/edit/123
+                path: 'add',
+                name: 'add_note',
+                builder: (context, state) =>
+                    const AddEditNoteScreen(noteId: null),
+              ),
+              GoRoute(
+                path: 'edit/:id',
                 name: 'edit_note',
                 builder: (context, state) {
-                  // Pass the 'id' from the URL to the screen
                   final id = state.pathParameters['id'];
                   return AddEditNoteScreen(noteId: id);
                 },

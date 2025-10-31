@@ -18,7 +18,7 @@ class WeatherScreen extends StatelessWidget {
       create: (context) => WeatherBloc(
         // Ask the provider tree for the repository
         weatherRepository: context.read<WeatherRepository>(),
-      ),
+      )..add(LoadLastCity()),
       child: const _WeatherView(),
     );
   }
@@ -46,11 +46,46 @@ class _WeatherViewState extends State<_WeatherView> {
   // Helper to submit the search
   void _submitSearch() {
     if (_searchController.text.isNotEmpty) {
-      // Find the BLoC and add the FetchWeather event
       context.read<WeatherBloc>().add(FetchWeather(_searchController.text));
-
-      // Hide the keyboard
       FocusScope.of(context).unfocus();
+    }
+  }
+
+  // --- ADD THIS ENTIRE NEW METHOD ---
+  Widget _buildWeatherChild(BuildContext context, WeatherState state) {
+    // The 'key' is CRITICAL. It tells the AnimatedSwitcher
+    // that the widget is *different* and it needs to animate.
+
+    switch (state.status) {
+      case WeatherStatus.initial:
+        return EmptyStateWidget(
+          key: const ValueKey('initial'), // <-- Add key
+          icon: Icons.cloud_outlined,
+          message: 'Search for a city to get the weather',
+        );
+
+      case WeatherStatus.loading:
+        return const CircularProgressIndicator(
+          key: ValueKey('loading'), // <-- Add key
+        );
+
+      case WeatherStatus.failure:
+        return Text(
+          key: const ValueKey('failure'), // <-- Add key
+          'Failed to fetch weather:\n${state.errorMessage}',
+          style: const TextStyle(color: Colors.red, fontSize: 16),
+          textAlign: TextAlign.center,
+        );
+
+      case WeatherStatus.success:
+        if (state.weather != null) {
+          return _WeatherDisplay(
+            key: ValueKey(state.weather!.cityName), // <-- Use a unique key
+            weather: state.weather!,
+          );
+        }
+        // Fallback for an impossible state
+        return const SizedBox.shrink(key: ValueKey('empty'));
     }
   }
 
@@ -82,40 +117,19 @@ class _WeatherViewState extends State<_WeatherView> {
             // --- 4. The Main Content Area ---
             Expanded(
               child: Center(
-                // This BlocBuilder will rebuild the content
-                // based on the WeatherState
+                // The BlocBuilder still decides *what* to show
                 child: BlocBuilder<WeatherBloc, WeatherState>(
                   builder: (context, state) {
-                    // --- Initial State ---
-                    if (state.status == WeatherStatus.initial) {
-                      return const EmptyStateWidget(
-                        icon: Icons.cloud_outlined,
-                        message: 'Search for a city to get the weather',
-                      );
-                    }
-
-                    // --- Loading State ---
-                    if (state.status == WeatherStatus.loading) {
-                      return const CircularProgressIndicator();
-                    }
-
-                    // --- Failure State ---
-                    if (state.status == WeatherStatus.failure) {
-                      return Text(
-                        'Failed to fetch weather:\n${state.errorMessage}',
-                        style: const TextStyle(color: Colors.red, fontSize: 16),
-                        textAlign: TextAlign.center,
-                      );
-                    }
-
-                    // --- Success State ---
-                    if (state.status == WeatherStatus.success &&
-                        state.weather != null) {
-                      return _WeatherDisplay(weather: state.weather!);
-                    }
-
-                    // Should never happen, but it's a good fallback
-                    return const Text('Something went wrong.');
+                    // --- AnimatedSwitcher handles *how* to show it ---
+                    return AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      // This defines the fade animation
+                      transitionBuilder: (child, animation) {
+                        return FadeTransition(opacity: animation, child: child);
+                      },
+                      // The 'child' is determined by our state
+                      child: _buildWeatherChild(context, state),
+                    );
                   },
                 ),
               ),
@@ -131,7 +145,7 @@ class _WeatherViewState extends State<_WeatherView> {
 class _WeatherDisplay extends StatelessWidget {
   final Weather weather;
 
-  const _WeatherDisplay({required this.weather});
+  const _WeatherDisplay({super.key, required this.weather});
 
   // Helper to get the weather icon URL
   String _getWeatherIconUrl(String iconCode) {

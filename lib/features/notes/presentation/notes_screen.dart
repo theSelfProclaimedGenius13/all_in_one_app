@@ -80,28 +80,31 @@ class _NoteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-      child: ListTile(
-        title: Text(
-          note.title ?? 'Untitled Note',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+    return Hero(
+      tag: 'note_${note.id}',
+      child: Card(
+        margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+        child: ListTile(
+          title: Text(
+            note.title ?? 'Untitled Note',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Text(
+            note.content,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          onTap: () {
+            // Navigate to the 'edit' screen, passing the note's ID
+            // We'll create this route in the next step
+            context.goNamed(
+              'edit_note',
+              pathParameters: {'id': note.id.toString()},
+            );
+          },
         ),
-        subtitle: Text(
-          note.content,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        onTap: () {
-          // Navigate to the 'edit' screen, passing the note's ID
-          // We'll create this route in the next step
-          context.goNamed(
-            'edit_note',
-            pathParameters: {'id': note.id.toString()},
-          );
-        },
       ),
     );
   }

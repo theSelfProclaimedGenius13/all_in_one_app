@@ -14,7 +14,6 @@ class ToDoScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My To-Do List'),
-        // We'll add the filter buttons at the bottom of the AppBar
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(kToolbarHeight),
           child: Padding(
@@ -22,24 +21,23 @@ class ToDoScreen extends StatelessWidget {
               horizontal: 16.0,
               vertical: 8.0,
             ),
-            // --- 1. THIS IS THE NEW FILTER WIDGET ---
+            // The filter buttons
             child: _BuildFilterButtons(),
           ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // --- 2. UPDATED a new dialog function ---
+          // The combined add/edit dialog
           _showAddEditTodoDialog(context);
         },
         child: const Icon(Icons.add),
       ),
 
-      // --- 3. UPDATED BlocConsumer ---
+      // We use BlocConsumer to build the UI and listen for errors
       body: BlocConsumer<TodoBloc, TodoState>(
-        // --- 4. UPDATED LISTENER ---
         listener: (context, state) {
-          // Listen for the 'failure' status
+          // Listen for the 'failure' status to show SnackBars
           if (state.status == TodoStatus.failure &&
               state.errorMessage != null) {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -51,31 +49,40 @@ class ToDoScreen extends StatelessWidget {
             );
           }
         },
-        // --- 5. UPDATED BUILDER ---
         builder: (context, state) {
           // --- Loading State ---
           if (state.status == TodoStatus.loading && state.allTodos.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // --- Empty State ---
-          // Use the FILTERED list to check for empty
-          if (state.filteredTodos.isEmpty) {
+          // --- Empty State (All Todos) ---
+          if (state.allTodos.isEmpty) {
             return const EmptyStateWidget(
               icon: Icons.check_circle_outline,
+              message: 'No to-dos yet. Tap + to add one!',
+            );
+          }
+
+          // --- Empty State (Filtered) ---
+          if (state.filteredTodos.isEmpty) {
+            return const EmptyStateWidget(
+              icon: Icons.filter_list_off,
               message: 'No to-dos in this filter.',
             );
           }
 
           // --- Success State (Show the list) ---
-          // Use the FILTERED list to build the ListView
+          // We get the list *from the state* every time. No local list.
           final todos = state.filteredTodos;
+
           return ListView.builder(
             itemCount: todos.length,
             itemBuilder: (context, index) {
               final todo = todos[index];
+
+              // We can use the simple, reliable Dismissible widget
               return Dismissible(
-                key: Key(todo.id.toString()),
+                key: Key(todo.id.toString()), // Unique key
                 direction: DismissDirection.endToStart,
                 background: Container(color: Colors.transparent),
                 secondaryBackground: Container(
@@ -85,16 +92,16 @@ class ToDoScreen extends StatelessWidget {
                   child: const Icon(Icons.delete, color: Colors.white),
                 ),
                 onDismissed: (direction) {
+                  // Fire the event, the BLoC handles the logic
                   context.read<TodoBloc>().add(DeleteTodo(todo.id));
                 },
                 child: ListTile(
-                  title: Text(
-                    todo.title ?? todo.task,
-                  ), // Show title if it exists
+                  title: Text(todo.title ?? todo.task),
                   subtitle: todo.title != null ? Text(todo.task) : null,
                   leading: Checkbox(
                     value: todo.isComplete,
                     onChanged: (bool? newValue) {
+                      // Fire the event, the BLoC handles the logic
                       if (newValue != null) {
                         context.read<TodoBloc>().add(
                           ToggleTodo(id: todo.id, isComplete: newValue),
@@ -103,7 +110,6 @@ class ToDoScreen extends StatelessWidget {
                     },
                   ),
                   onTap: () {
-                    // --- 6. UPDATED the dialog call ---
                     _showAddEditTodoDialog(context, todoToEdit: todo);
                   },
                 ),
@@ -115,8 +121,7 @@ class ToDoScreen extends StatelessWidget {
     );
   }
 
-  // --- 7. A NEW, COMBINED DIALOG FUNCTION ---
-  // This handles BOTH adding and editing
+  // --- This is the combined Add/Edit dialog function ---
   void _showAddEditTodoDialog(BuildContext context, {Todo? todoToEdit}) {
     final bool isEditing = todoToEdit != null;
     final titleController = TextEditingController(text: todoToEdit?.title);
@@ -161,27 +166,17 @@ class ToDoScreen extends StatelessWidget {
                     : titleController.text;
 
                 if (task.isEmpty && !isEditing) {
-                  // Don't add an empty task
                   Navigator.pop(dialogContext);
                   return;
                 }
 
                 if (isEditing) {
-                  // --- 8. UPDATED 'UpdateTodo' event ---
                   context.read<TodoBloc>().add(
-                    UpdateTodo(
-                      id: todoToEdit.id,
-                      task: task, // Use 'task'
-                      title: title,
-                    ),
+                    UpdateTodo(id: todoToEdit.id, task: task, title: title),
                   );
                 } else {
-                  // --- 9. UPDATED 'AddTodo' event ---
                   context.read<TodoBloc>().add(
-                    AddTodo(
-                      task: task, // Use 'task'
-                      title: title,
-                    ),
+                    AddTodo(task: task, title: title),
                   );
                 }
                 Navigator.pop(dialogContext);
@@ -195,7 +190,7 @@ class ToDoScreen extends StatelessWidget {
   }
 }
 
-// --- 10. THE NEW FILTER WIDGET ---
+// --- This is the filter button widget (unchanged) ---
 class _BuildFilterButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -203,15 +198,11 @@ class _BuildFilterButtons extends StatelessWidget {
     final currentFilter = context.select((TodoBloc bloc) => bloc.state.filter);
 
     return SegmentedButton<TodoFilter>(
-      // The currently selected filter
       selected: {currentFilter},
-      // This is called when a new segment is tapped
       onSelectionChanged: (Set<TodoFilter> newFilter) {
-        // Send the event to the BLoC
         context.read<TodoBloc>().add(ChangeFilter(newFilter.first));
       },
       segments: const [
-        // The three filter options
         ButtonSegment(
           value: TodoFilter.all,
           label: Text('All'),

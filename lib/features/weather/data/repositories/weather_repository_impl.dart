@@ -4,12 +4,14 @@ import 'package:http/http.dart' as http;
 
 import '../../domain/repositories/weather_repository.dart';
 import '../../domain/weather.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class WeatherRepositoryImpl implements WeatherRepository {
   // --- ⚠️ PASTE YOUR API KEY HERE ---
   final String _apiKey = dotenv.env['OPENWEATHER_API_KEY'] ?? 'MISSING_API_KEY';
 
   final String _baseUrl = 'https://api.openweathermap.org/data/2.5/weather';
+  static const String _cityCacheKey = 'last_searched_city';
 
   @override
   Future<Weather> getWeather(String cityName) async {
@@ -37,5 +39,17 @@ class WeatherRepositoryImpl implements WeatherRepository {
     } catch (e) {
       throw Exception('Failed to load weather: $e');
     }
+  }
+
+  @override
+  Future<String?> getLastSearchedCity() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_cityCacheKey);
+  }
+
+  @override
+  Future<void> saveLastSearchedCity(String cityName) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_cityCacheKey, cityName);
   }
 }

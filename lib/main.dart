@@ -9,9 +9,10 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:all_in_one_app/features/settings/bloc/theme_bloc.dart';
-
+import 'package:all_in_one_app/features/notes/bloc/notes_bloc.dart';
+import 'package:all_in_one_app/features/notes/domain/repositories/notes_repositories.dart';
+import 'features/notes/bloc/notes_event.dart';
 import 'features/notes/data/repositories/notes_repository_impl.dart';
-import 'features/notes/domain/repositories/notes_repositories.dart';
 import 'features/pomodoro/bloc/pomodoro_bloc.dart';
 import 'features/pomodoro/notification_services.dart';
 import 'features/settings/bloc/theme_state.dart';
@@ -91,6 +92,12 @@ class MyApp extends StatelessWidget {
           BlocProvider<PomodoroBloc>(
             create: (context) =>
                 PomodoroBloc(notificationService: notificationService),
+          ),
+          BlocProvider<NotesBloc>(
+            create: (context) => NotesBloc(
+              // Ask for the repository from the context
+              notesRepository: context.read<NotesRepository>(),
+            )..add(LoadNotes()), // <-- Immediately load notes on app start
           ),
         ],
         child: BlocBuilder<ThemeBloc, AppThemeState>(

@@ -101,16 +101,15 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // --- 1. CREATE THE SCAFFOLD WIDGET AS A VARIABLE ---
+    final scaffoldWidget = Scaffold(
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit Note' : 'Add Note'),
         actions: [
-          // --- Show Delete Button only in Edit Mode ---
           if (_isEditing)
             IconButton(icon: const Icon(Icons.delete), onPressed: _onDelete),
-
-          // --- The Save Button ---
           IconButton(icon: const Icon(Icons.save), onPressed: _onSave),
         ],
       ),
@@ -118,7 +117,6 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // --- Title Field ---
             TextField(
               controller: _titleController,
               decoration: const InputDecoration(
@@ -128,17 +126,12 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const Divider(),
-
-            // --- Content Field ---
             Expanded(
               child: TextField(
                 controller: _contentController,
                 autofocus: true,
-                // Automatically open the keyboard
                 maxLines: null,
-                // Allows unlimited lines
                 expands: true,
-                // Fills the available space
                 decoration: const InputDecoration(
                   hintText: 'Start writing...',
                   border: InputBorder.none,
@@ -150,5 +143,23 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
         ),
       ),
     );
+
+    // --- 2. THE CONDITIONAL LOGIC ---
+    if (_isEditing) {
+      // If we are editing, wrap the Scaffold in a Hero
+      // with the *exact same tag* as the list item.
+      return Hero(
+        tag: 'note_${widget.noteId}', // <-- THE MATCHING TAG
+        child: Material(
+          // Hero needs a Material parent to animate
+          type: MaterialType.transparency,
+          child: scaffoldWidget,
+        ),
+      );
+    } else {
+      // If we are adding, just return the plain Scaffold.
+      // No animation will happen.
+      return scaffoldWidget;
+    }
   }
 }
