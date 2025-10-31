@@ -26,7 +26,7 @@ void main() async {
   final supabaseUrl = dotenv.env['SUPABASE_URL'];
   final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
   // --- 1. INITIALIZE SERVICES ---
-  // (Your Supabase URL/key goes here)
+
   if (supabaseUrl == null || supabaseAnonKey == null) {
     // This will crash the app on purpose if you forget your keys
     throw Exception(
