@@ -51,77 +51,100 @@ class ScaffoldWithMenu extends StatelessWidget {
       ),
       drawer: Drawer(
         // A COLUMN TO SEPARATE THE LIST AND LOGOUT BUTTON(Removed) ---
-        child: Column(
-          children: [
-            // Header
-            Container(
-              height: kToolbarHeight + MediaQuery.of(context).padding.top,
-              color: Colors.blue,
-              child: Padding(
-                padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).padding.top,
-                  left: 16.0,
-                ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Menu',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20.0,
-                      fontWeight: FontWeight.w500,
+        child: SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              // Header
+              Container(
+                height: kToolbarHeight + MediaQuery.of(context).padding.top,
+                color: Colors.blue,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).padding.top,
+                    left: 16.0,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Menu',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20.0,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
 
-            // AN EXPANDED LISTVIEW.SEPARATED TO BUILD THE LIST
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.all(
-                  8.0,
-                ), // Add padding around the list
-                itemCount: navItems.length,
+              // AN EXPANDED LISTVIEW.SEPARATED TO BUILD THE LIST
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(
+                    8.0,
+                  ), // Add padding around the list
+                  itemCount: navItems.length,
 
-                // This builds divider
-                separatorBuilder: (context, index) => SizedBox(height: 4),
+                  // This builds divider
+                  separatorBuilder: (context, index) => SizedBox(height: 4),
 
-                // This builds each ListTile from  list
-                itemBuilder: (context, index) {
-                  final item = navItems[index];
-                  final isSelected = currentRoute == item['routeName'];
+                  // This builds each ListTile from  list
+                  itemBuilder: (context, index) {
+                    final item = navItems[index];
+                    final isSelected = currentRoute == item['routeName'];
 
-                  return ListTile(
-                    tileColor: Colors.teal.withValues(alpha: 0.8),
-                    // Color
-                    shape: RoundedSuperellipseBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    leading: Icon(
-                      item['icon'] as IconData,
-                      color: Colors.white,
-                    ),
-                    title: Text(
-                      item['title'] as String,
-                      style: TextStyle(color: Colors.white),
-                    ),
+                    return ListTile(
+                      tileColor: Colors.teal.withValues(alpha: 0.8),
+                      // Color
+                      shape: RoundedSuperellipseBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      leading: Icon(
+                        item['icon'] as IconData,
+                        color: Colors.white,
+                      ),
+                      title: Text(
+                        item['title'] as String,
+                        style: TextStyle(color: Colors.white),
+                      ),
 
-                    //THIS FIXES THE HIGHLIGHTING
-                    selected: isSelected,
-                    selectedTileColor: Colors.teal,
-                    // Makes selected item darker
-                    selectedColor: Colors.white,
+                      //THIS FIXES THE HIGHLIGHTING
+                      selected: isSelected,
+                      selectedTileColor: Colors.teal,
+                      // Makes selected item darker
+                      selectedColor: Colors.white,
 
-                    onTap: () {
-                      context.goNamed(item['routeName'] as String);
-                      Navigator.of(context).pop();
-                    },
-                  );
-                },
+                      onTap: () {
+                        context.goNamed(item['routeName'] as String);
+                        Navigator.of(context).pop();
+                      },
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+              Divider(color: Colors.blue, thickness: 2),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: ListTile(
+                  tileColor: Colors.green.shade600,
+                  // A nice highlight color
+                  shape: RoundedSuperellipseBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  leading: Icon(Icons.favorite, color: Colors.white),
+                  title: Text(
+                    'Support This App',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    context.goNamed('donate'); // Navigate to the new route
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       body: child,

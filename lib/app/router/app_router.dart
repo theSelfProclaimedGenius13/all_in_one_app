@@ -16,6 +16,7 @@ import 'package:go_router/go_router.dart';
 import 'package:all_in_one_app/features/weather/presentation/weather_screen.dart';
 import '../../features/calculator/presentation/advance_calculator_screen.dart';
 
+import '../../features/donate/presentation/donate_screen.dart';
 import '../../features/notes/presentation/add_edit_notes_screen.dart';
 import '../../features/notes/presentation/notes_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
@@ -133,6 +134,11 @@ class AppRouter {
                 },
               ),
             ],
+          ),
+          GoRoute(
+            path: '/donate',
+            name: 'donate',
+            builder: (context, state) => const DonateScreen(),
           ),
 
           // Add other pages with the menu bar here

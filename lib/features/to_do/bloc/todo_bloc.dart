@@ -3,7 +3,6 @@
 import 'package:all_in_one_app/features/to_do/bloc/todo_event.dart';
 import 'package:all_in_one_app/features/to_do/bloc/todo_state.dart';
 
-import 'package:all_in_one_app/features/to_do/domain/todo.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../domain/repositories/to_do_repository.dart';
