@@ -65,8 +65,8 @@ class SignupScreen extends StatelessWidget {
                   onPressed: () {
                     context.read<AuthBloc>().add(
                       SignupRequested(
-                        emailController.text,
-                        passwordController.text,
+                        email: emailController.text,
+                        password: passwordController.text,
                       ),
                     );
                   },

@@ -20,6 +20,8 @@ import 'features/to_do/data/repositories/to_do_repo_impl.dart';
 import 'features/to_do/domain/repositories/to_do_repository.dart';
 import 'features/weather/data/repositories/weather_repository_impl.dart';
 import 'features/weather/domain/repositories/weather_repository.dart';
+import 'package:all_in_one_app/features/profile/data/repositories/profile_repository_impl.dart';
+import 'package:all_in_one_app/features/profile/domain/repositories/profile_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,7 +37,17 @@ void main() async {
     );
   }
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
-
+  final authBloc = AuthBloc(authRepository: AuthRepository(AuthApi()));
+  Supabase.instance.client.auth.getUser().then((response) {
+    final user = response.user;
+    if (user != null) {
+      authBloc.add(
+        AuthStateChanged(
+          AuthState(session: Supabase.instance.client.auth.currentSession),
+        ),
+      );
+    }
+  });
   final notificationService = NotificationService();
   await notificationService.init();
 
@@ -75,6 +87,9 @@ class MyApp extends StatelessWidget {
         ),
         RepositoryProvider<WeatherRepository>(
           create: (context) => WeatherRepositoryImpl(),
+        ),
+        RepositoryProvider<ProfileRepository>(
+          create: (context) => ProfileRepositoryImpl(),
         ),
       ],
       child: MultiBlocProvider(

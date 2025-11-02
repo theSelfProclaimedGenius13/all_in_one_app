@@ -30,6 +30,9 @@
                 <data
                     android:scheme="io.supabase.hqegfonbltywlpxuwryj"
                     android:host="auth" />
+                <data
+                    android:scheme="allinoneapp"
+                    android:host="login" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

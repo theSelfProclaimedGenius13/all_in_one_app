@@ -7,7 +7,10 @@ class AuthRepository {
 
   AuthRepository(this.api);
 
-  Future<UserEntity?> loginWithEmail(String email, String password) async {
+  Future<UserEntity?> loginWithEmail({
+    required String email,
+    required String password,
+  }) async {
     final response = await api.signInWithEmail(email, password);
     final user = response.user;
     if (user == null) return null;
@@ -28,7 +31,10 @@ class AuthRepository {
     await api.signInWithProvider(provider);
   }
 
-  Future<dynamic> signUpWithEmail(String email, String password) {
+  Future<dynamic> signUpWithEmail({
+    required String email,
+    required String password,
+  }) {
     return api.signUpWithEmail(email, password);
   }
 

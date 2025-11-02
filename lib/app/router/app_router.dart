@@ -40,6 +40,23 @@ class AppRouter {
     refreshListenable: GoRouterRefreshStream(authBloc.stream),
 
     routes: [
+      GoRoute(
+        path: '/',
+        name: 'root',
+        // This route now has NO builder. It ONLY redirects.
+        redirect: (context, state) {
+          // Get the BLoC from the context
+          final authState = context.read<AuthBloc>().state;
+
+          if (authState is AuthAuthenticated) {
+            // If logged in, go to the REAL home page
+            return '/home';
+          } else {
+            // If not logged in, go to login
+            return '/login';
+          }
+        },
+      ),
       // --- Top-Level Routes (No Menu Bar) ---
       GoRoute(
         path: '/login',
