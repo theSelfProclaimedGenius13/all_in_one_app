@@ -16,7 +16,7 @@ class AuthApi {
   Future<void> signInWithProvider(OAuthProvider provider) async {
     await client.auth.signInWithOAuth(
       provider,
-      redirectTo: 'io.supabase.hqegfonbltywlpxuwryj://auth',
+      redirectTo: 'allinoneapp://auth',
     );
   }
 

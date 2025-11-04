@@ -26,56 +26,31 @@ import 'package:all_in_one_app/features/profile/domain/repositories/profile_repo
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
-  final supabaseUrl = dotenv.env['SUPABASE_URL'];
-  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
-  // --- 1. INITIALIZE SERVICES ---
+  final supabaseUrl = dotenv.env['SUPABASE_URL']?.trim();
+  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY']?.trim();
 
   if (supabaseUrl == null || supabaseAnonKey == null) {
-    // This will crash the app on purpose if you forget your keys
     throw Exception(
       'Failed to load .env file. Make sure SUPABASE_URL and SUPABASE_ANON_KEY are set.',
     );
   }
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
-  final authBloc = AuthBloc(authRepository: AuthRepository(AuthApi()));
-  Supabase.instance.client.auth.getUser().then((response) {
-    final user = response.user;
-    if (user != null) {
-      authBloc.add(
-        AuthStateChanged(
-          AuthState(session: Supabase.instance.client.auth.currentSession),
-        ),
-      );
-    }
-  });
+
   final notificationService = NotificationService();
   await notificationService.init();
 
-  // --- 2. RUN THE APP ---
-  // We'll pass the notification service, but that's it!
   runApp(MyApp(notificationService: notificationService));
 }
 
 class MyApp extends StatelessWidget {
   final NotificationService notificationService;
 
-  // --- 3. CREATE THE ROUTER ---
-  // We create the router here so it can access the AuthBloc
-  late final GoRouter _router;
-
-  MyApp({super.key, required this.notificationService}) {
-    // We create a temp AuthBloc *just* for the router's redirect logic
-    // This is a common pattern with GoRouter
-    final authBloc = AuthBloc(authRepository: AuthRepository(AuthApi()));
-    _router = AppRouter(authBloc).router;
-  }
+  const MyApp({super.key, required this.notificationService});
 
   @override
   Widget build(BuildContext context) {
-    // --- 4. THE PROVIDER ROOT ---
     return MultiRepositoryProvider(
       providers: [
-        // --- Provide all of our repositories here ---
         RepositoryProvider<AuthRepository>(
           create: (context) => AuthRepository(AuthApi()),
         ),
@@ -94,12 +69,9 @@ class MyApp extends StatelessWidget {
       ],
       child: MultiBlocProvider(
         providers: [
-          // --- Create all global BLoCs here ---
           BlocProvider<AuthBloc>(
-            create: (context) => AuthBloc(
-              // Ask for the repository from the context
-              authRepository: context.read<AuthRepository>(),
-            ),
+            create: (context) =>
+                AuthBloc(authRepository: context.read<AuthRepository>()),
           ),
           BlocProvider<ThemeBloc>(
             create: (context) => ThemeBloc()..add(LoadTheme()),
@@ -109,21 +81,28 @@ class MyApp extends StatelessWidget {
                 PomodoroBloc(notificationService: notificationService),
           ),
           BlocProvider<NotesBloc>(
-            create: (context) => NotesBloc(
-              // Ask for the repository from the context
-              notesRepository: context.read<NotesRepository>(),
-            )..add(LoadNotes()), // <-- Immediately load notes on app start
+            create: (context) =>
+                NotesBloc(notesRepository: context.read<NotesRepository>())
+                  ..add(LoadNotes()),
           ),
         ],
-        child: BlocBuilder<ThemeBloc, AppThemeState>(
-          builder: (context, state) {
-            return MaterialApp.router(
-              title: 'All In One App',
-              routerConfig: _router,
-              debugShowCheckedModeBanner: false,
-              themeMode: state.themeMode,
-              theme: ThemeData.light(),
-              darkTheme: ThemeData.dark(),
+        child: Builder(
+          // Build the router *after* AuthBloc exists, and use the same instance
+          builder: (context) {
+            final authBloc = context.read<AuthBloc>();
+            final GoRouter router = AppRouter(authBloc).router;
+
+            return BlocBuilder<ThemeBloc, AppThemeState>(
+              builder: (context, state) {
+                return MaterialApp.router(
+                  title: 'All In One App',
+                  routerConfig: router,
+                  debugShowCheckedModeBanner: false,
+                  themeMode: state.themeMode,
+                  theme: ThemeData.light(),
+                  darkTheme: ThemeData.dark(),
+                );
+              },
             );
           },
         ),

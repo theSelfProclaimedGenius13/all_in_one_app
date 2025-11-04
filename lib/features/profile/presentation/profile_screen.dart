@@ -2,7 +2,6 @@ import 'package:all_in_one_app/features/auth/domain/user_entity.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:all_in_one_app/features/auth/bloc/auth_bloc.dart';
-import 'package:all_in_one_app/features/auth/bloc/auth_event.dart';
 import 'package:all_in_one_app/features/auth/bloc/auth_state.dart';
 import 'package:all_in_one_app/features/profile/bloc/profile_bloc.dart';
 import 'package:all_in_one_app/features/profile/domain/profile.dart';
@@ -11,24 +10,22 @@ import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// 1. This widget now provides the new ProfileBloc
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => ProfileBloc(
-        // Ask for the repository from our provider tree
-        profileRepository: context.read<ProfileRepository>(),
-      )..add(LoadProfile()), // <-- Immediately load the profile
+      create: (context) =>
+          ProfileBloc(profileRepository: context.read<ProfileRepository>())
+            ..add(LoadProfile()),
       child: const _ProfileView(),
     );
   }
 }
 
-/// 2. The UI is now a StatefulWidget
 class _ProfileView extends StatefulWidget {
   const _ProfileView();
 
@@ -36,35 +33,49 @@ class _ProfileView extends StatefulWidget {
   State<_ProfileView> createState() => _ProfileViewState();
 }
 
-class _ProfileViewState extends State<_ProfileView> {
-  // 3. A local variable to track if we are in "edit mode"
+class _ProfileViewState extends State<_ProfileView>
+    with WidgetsBindingObserver {
   bool _isEditing = false;
-
-  // 4. Controllers for our text fields
   late final TextEditingController _usernameController;
   late final TextEditingController _fullNameController;
   DateTime? _selectedDob;
   String? _selectedCountry;
 
-  // We'll also need a controller for DOB, but that's more complex (DatePicker)
-
   @override
   void initState() {
     super.initState();
-    // Initialize controllers
+    WidgetsBinding.instance.addObserver(this);
     _usernameController = TextEditingController();
     _fullNameController = TextEditingController();
+
+    // Ensure we have the freshest user (e.g., after tapping the verify link)
+    _refreshAuthSilently();
+  }
+
+  Future<void> _refreshAuthSilently() async {
+    try {
+      await Supabase.instance.client.auth.refreshSession();
+    } catch (_) {
+      // ignore — just a best-effort refresh
+    }
   }
 
   @override
   void dispose() {
-    // Clean up controllers
+    WidgetsBinding.instance.removeObserver(this);
     _usernameController.dispose();
     _fullNameController.dispose();
     super.dispose();
   }
 
-  /// 5. Helper to populate controllers from the BLoC state
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // If user returns from email app after verification, pull latest auth again
+    if (state == AppLifecycleState.resumed) {
+      _refreshAuthSilently();
+    }
+  }
+
   void _populateControllers(Profile profile) {
     _usernameController.text = profile.username ?? '';
     _fullNameController.text = profile.fullName ?? '';
@@ -74,13 +85,13 @@ class _ProfileViewState extends State<_ProfileView> {
 
   @override
   Widget build(BuildContext context) {
-    // Get the user's *login info* (Email/Phone) from the AuthBloc
-    final authUser =
-        (context.watch<AuthBloc>().state as AuthAuthenticated).user;
+    final authState = context.watch<AuthBloc>().state;
+    final UserEntity? authUser = authState is AuthAuthenticated
+        ? authState.user
+        : null;
 
     return BlocListener<ProfileBloc, ProfileState>(
       listener: (context, state) {
-        // 6. Show SnackBars for success/failure on updates
         if (state.status == ProfileStatus.failure) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -89,7 +100,6 @@ class _ProfileViewState extends State<_ProfileView> {
             ),
           );
         } else if (state.status == ProfileStatus.success && _isEditing) {
-          // If we successfully saved, exit edit mode
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Profile saved!'),
@@ -103,20 +113,16 @@ class _ProfileViewState extends State<_ProfileView> {
       },
       child: BlocBuilder<ProfileBloc, ProfileState>(
         builder: (context, state) {
-          // 7. On first successful load, populate controllers
           if (state.status == ProfileStatus.success &&
               _usernameController.text.isEmpty) {
             _populateControllers(state.profile!);
           }
 
           return Scaffold(
-            // --- 8. THE NEW APP BAR ---
             appBar: AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
-              // The "Edit" / "Save" button
               actions: [
-                // Show a loading spinner if BLoC is busy
                 if (state.status == ProfileStatus.loading)
                   const Padding(
                     padding: EdgeInsets.all(16.0),
@@ -127,10 +133,8 @@ class _ProfileViewState extends State<_ProfileView> {
                     ),
                   )
                 else if (_isEditing)
-                  // --- SAVE BUTTON ---
                   TextButton(
                     onPressed: () {
-                      // Send the 'UpdateProfile' event
                       final updatedProfile = state.profile!.copyWith(
                         username: _usernameController.text,
                         fullName: _fullNameController.text,
@@ -144,10 +148,8 @@ class _ProfileViewState extends State<_ProfileView> {
                     child: const Text('Save'),
                   )
                 else
-                  // --- EDIT BUTTON ---
                   TextButton(
                     onPressed: () {
-                      // Populate controllers and enter edit mode
                       _populateControllers(state.profile!);
                       setState(() {
                         _isEditing = true;
@@ -155,28 +157,6 @@ class _ProfileViewState extends State<_ProfileView> {
                     },
                     child: const Text('Edit'),
                   ),
-
-                // --- LOGOUT MENU BUTTON (three dots) ---
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'logout') {
-                      context.read<AuthBloc>().add(LogoutRequested());
-                    }
-                  },
-                  itemBuilder: (BuildContext context) =>
-                      <PopupMenuEntry<String>>[
-                        const PopupMenuItem<String>(
-                          value: 'logout',
-                          child: ListTile(
-                            leading: Icon(Icons.logout, color: Colors.red),
-                            title: Text(
-                              'Logout',
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ),
-                        ),
-                      ],
-                ),
               ],
             ),
             body: _buildBody(context, state, authUser),
@@ -186,11 +166,10 @@ class _ProfileViewState extends State<_ProfileView> {
     );
   }
 
-  // --- 9. THE MAIN BODY UI ---
   Widget _buildBody(
     BuildContext context,
     ProfileState state,
-    UserEntity authUser,
+    UserEntity? authUser,
   ) {
     if (state.status == ProfileStatus.loading && state.profile == null) {
       return const Center(child: CircularProgressIndicator());
@@ -200,11 +179,9 @@ class _ProfileViewState extends State<_ProfileView> {
       return const Center(child: Text('Could not load profile.'));
     }
 
-    // The main profile content
     return ListView(
       padding: const EdgeInsets.all(16.0),
       children: [
-        // --- AVATAR ---
         Center(
           child: CircleAvatar(
             radius: 50,
@@ -212,8 +189,6 @@ class _ProfileViewState extends State<_ProfileView> {
           ),
         ),
         const SizedBox(height: 24),
-
-        // --- EDITABLE FIELDS ---
         _buildProfileTextField(
           controller: _usernameController,
           label: 'Username',
@@ -226,41 +201,34 @@ class _ProfileViewState extends State<_ProfileView> {
           enabled: _isEditing,
         ),
         const SizedBox(height: 16),
-        _buildCountryPicker(context), // <-- The new Country Picker
+        _buildCountryPicker(context),
         const SizedBox(height: 16),
         _buildDobPicker(context),
-
         const Divider(height: 40),
 
-        // --- NON-EDITABLE FIELDS ---
+        // Email row — safe for null, and will update after refreshSession
         ListTile(
           leading: const Icon(Icons.email_outlined),
           title: const Text('Email'),
-          // 'email' is non-nullable, so we can use it directly.
-          subtitle: Text(authUser.email),
+          subtitle: Text(authUser?.email ?? '—'),
           trailing: const Icon(Icons.edit, size: 18),
-          onTap: () {
-            _showChangeEmailDialog(context, authUser.email);
-          },
+          onTap: authUser == null
+              ? null
+              : () => _showChangeEmailDialog(context, authUser.email),
         ),
         ListTile(
           leading: const Icon(Icons.phone_outlined),
           title: const Text('Phone'),
-          // 'phone' IS nullable, so we check it explicitly.
-          // This makes the analyzer happy and removes the warning.
           subtitle: Text(
-            authUser.phone != null ? authUser.phone! : 'No phone provided',
+            authUser?.phone != null ? authUser!.phone! : 'No phone provided',
           ),
           trailing: const Icon(Icons.edit, size: 18),
-          onTap: () {
-            // TODO: Add phone dialog
-          },
+          onTap: () {},
         ),
       ],
     );
   }
 
-  // --- 10. A HELPER for our TextFields ---
   Widget _buildProfileTextField({
     required TextEditingController controller,
     required String label,
@@ -272,7 +240,6 @@ class _ProfileViewState extends State<_ProfileView> {
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
-        // Show a "filled" look when not editing
         filled: !enabled,
         fillColor: !enabled ? Colors.grey[100] : null,
       ),
@@ -294,7 +261,6 @@ class _ProfileViewState extends State<_ProfileView> {
           ? Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // This is your "None" option
                 if (hasCountry)
                   IconButton(
                     icon: const Icon(Icons.clear, size: 20),
@@ -309,9 +275,8 @@ class _ProfileViewState extends State<_ProfileView> {
             )
           : null,
       onTap: !_isEditing
-          ? null // Disable tap if not editing
+          ? null
           : () {
-              // This shows the country picker
               showCountryPicker(
                 context: context,
                 onSelect: (Country country) {
@@ -324,9 +289,7 @@ class _ProfileViewState extends State<_ProfileView> {
     );
   }
 
-  // --- ADD THIS NEW HELPER FOR DOB ---
   Widget _buildDobPicker(BuildContext context) {
-    // Use intl package to format the date
     final displayDate = _selectedDob != null
         ? DateFormat.yMMMd().format(_selectedDob!)
         : 'Date of Birth';
@@ -340,9 +303,8 @@ class _ProfileViewState extends State<_ProfileView> {
       title: Text(displayDate),
       trailing: _isEditing ? const Icon(Icons.calendar_today) : null,
       onTap: !_isEditing
-          ? null // Disable tap if not editing
+          ? null
           : () async {
-              // This shows the date picker
               final pickedDate = await showDatePicker(
                 context: context,
                 initialDate: _selectedDob ?? DateTime.now(),
@@ -362,15 +324,11 @@ class _ProfileViewState extends State<_ProfileView> {
     final emailController = TextEditingController();
     bool isSending = false;
 
-    // --- 1. GET THE BLOC *BEFORE* THE DIALOG ---
-    // We use the 'context' from the main page, which CAN find the BLoC.
     final ProfileBloc profileBloc = context.read<ProfileBloc>();
 
     showDialog(
       context: context,
       builder: (dialogContext) {
-        // --- 2. WRAP THE DIALOG IN A BlocProvider.value ---
-        // This "passes" the BLoC we found into the dialog's widget tree.
         return BlocProvider.value(
           value: profileBloc,
           child: StatefulBuilder(
@@ -410,9 +368,6 @@ class _ProfileViewState extends State<_ProfileView> {
                                 isSending = true;
                               });
 
-                              // --- 3. THIS WILL NOW WORK ---
-                              // We can safely read the BLoC from
-                              // the context or just use our variable.
                               profileBloc.add(
                                 ChangeEmailRequested(emailController.text),
                               );

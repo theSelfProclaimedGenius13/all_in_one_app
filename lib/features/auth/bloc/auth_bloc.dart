@@ -1,24 +1,22 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:all_in_one_app/features/auth/bloc/auth_state.dart'; // Imports Auth_State
+import 'package:all_in_one_app/features/auth/bloc/auth_state.dart';
 import 'package:all_in_one_app/features/auth/bloc/auth_event.dart';
 import 'package:all_in_one_app/features/auth/data/auth_repository.dart';
 import 'package:all_in_one_app/features/auth/domain/user_entity.dart';
 
 class AuthBloc extends Bloc<AuthEvent, Auth_State> {
   final AuthRepository authRepository;
-  StreamSubscription<AuthState>?
-  _authStateSubscription; // This 'AuthState' is from Supabase
+  StreamSubscription<AuthState>? _authStateSubscription;
 
   AuthBloc({required this.authRepository}) : super(const AuthInitial()) {
     on<LoginRequested>(_onLoginRequested);
     on<LogoutRequested>(_onLogoutRequested);
     on<SignupRequested>(_onSignupRequested);
     on<SocialLoginRequested>(_onSocialLoginRequested);
-    on<AuthStateChanged>(_onAuthStateChanged); // This is the important one
+    on<AuthStateChanged>(_onAuthStateChanged);
 
-    // Subscribe to the stream
     _authStateSubscription = Supabase.instance.client.auth.onAuthStateChange
         .listen((data) {
           add(AuthStateChanged(data));
@@ -30,8 +28,6 @@ class AuthBloc extends Bloc<AuthEvent, Auth_State> {
     _authStateSubscription?.cancel();
     return super.close();
   }
-
-  // --- HANDLER METHODS ---
 
   Future<void> _onLoginRequested(
     LoginRequested event,
@@ -93,30 +89,29 @@ class AuthBloc extends Bloc<AuthEvent, Auth_State> {
     }
   }
 
-  // --- !! THIS IS THE HANDLER WITH THE FIX !! ---
+  // Robust: use currentUser when present, and don't drop to unauth during email verify flow
   void _onAuthStateChanged(AuthStateChanged event, Emitter<Auth_State> emit) {
+    final auth = Supabase.instance.client.auth;
     final session = event.data.session;
-    // --- THIS IS THE CRASH-FIX ---
-    // This stops the BLoC from logging you out
-    // during the email change, which stops the crash.
+    final supaUser = auth.currentUser ?? session?.user;
 
-    // --- END OF FIX ---
-
-    if (session == null) {
-      emit(const AuthUnauthenticated());
-    } else {
+    if (supaUser != null) {
       final userEntity = UserEntity(
-        id: session.user.id,
-        email: session.user.email ?? '',
-        phone: session.user.phone ?? '',
-        name: session.user.userMetadata?['name'],
-        username: session.user.userMetadata?['username'],
-        avatarUrl: session.user.userMetadata?['avatar_url'],
-        dateOfBirth: session.user.userMetadata?['dateOfBirth'],
-        country: session.user.userMetadata?['country'],
-        linkedProviders: [],
+        id: supaUser.id,
+        email: supaUser.email ?? '',
+        phone: supaUser.phone ?? '',
+        name: supaUser.userMetadata?['name'],
+        username: supaUser.userMetadata?['username'],
+        avatarUrl: supaUser.userMetadata?['avatar_url'],
+        dateOfBirth: supaUser.userMetadata?['dateOfBirth'],
+        country: supaUser.userMetadata?['country'],
+        linkedProviders: const [],
       );
       emit(AuthAuthenticated(userEntity));
+      return;
     }
+
+    // Truly signed out
+    emit(const AuthUnauthenticated());
   }
 }
